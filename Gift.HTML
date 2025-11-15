@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Gift for You</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Garden Button: Allows user to switch between views -->
+    <button id="garden-button">View Garden</button>
+    
+    <!-- Flower View: The main interactive gift container -->
+    <div id="flower-view" class="container">
+        
+        <!-- Initial Watering State -->
+        <div id="initial-state">
+            <h1 id="watering-instruction"></h1>
+            <img id="watering-can" src="watering_can.png" alt="A pixel art watering can">
+        </div>
+
+        <!-- Gift Reveal State -->
+        <div id="gift-reveal" class="hidden">
+            <h2>Your Flower Has Bloomed!</h2>
+            <img id="main-flower" src="Rose.png" alt="A beautiful pixel art flower">
+            <p>From the depths of my heart, this message is for you:</p>
+            <div id="personal-message"></div>
+            
+            <!-- Sparkle Overlay -->
+            <div id="sparkle-overlay" class="hidden"></div>
+        </div>
+
+    </div>
+
+    <!-- Garden View: Displays saved flowers (hidden by default) -->
+    <div id="garden-view">
+        <h2>My Everlasting Garden 🌸</h2>
+        <div id="flower-grid">
+            <p style="text-align: center;">Loading your unique collection...</p>
+        </div>
+    </div>
+    
+    <!-- Hidden audio element for background music -->
+    <audio id="background-music" loop></audio>
+    
+    <!-- *** Firebase Compat Kütüphaneleri YÜKLENİYOR *** -->
+    <!-- Bu, tüm fonksiyonları global 'firebase' nesnesine dahil eder. -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
+    
+    <!-- script.js global 'firebase' nesnesini kullanır. -->
+    <script src="script.js"></script>
+    
+</body>
+</html>
