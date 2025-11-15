@@ -11,9 +11,6 @@ if (typeof __firebase_config !== 'undefined' && __firebase_config.trim() !== '')
     }
 } else {
     // === FIX FOR LOCAL SERVER RUNNING ===
-    // If running locally, the environment variables are not defined.
-    // We provide a dummy/placeholder configuration to allow Firebase initialization 
-    // without crashing, although data saving/loading will not work locally.
     console.warn("Using placeholder Firebase configuration for local development.");
     firebaseConfig = {
         apiKey: "AIzaSy_LOCAL_DEV_KEY",
@@ -23,14 +20,12 @@ if (typeof __firebase_config !== 'undefined' && __firebase_config.trim() !== '')
         messagingSenderId: "1234567890",
         appId: "1:1234567890:web:localdev"
     };
-    // ===================================
+    
 }
 
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
 // Initialize Firebase App and Services using the global 'firebase' object (Compat API)
-// If firebaseConfig is empty here, the next line will still throw the original error.
-// The fallback above ensures firebaseConfig is always populated.
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
@@ -42,11 +37,6 @@ let isAuthReady = false;
 
 // --- Utility Functions ---
 
-/**
- * Converts a Firestore Timestamp object to a readable date string.
- * @param {Object} timestamp - The Firestore timestamp object (or equivalent).
- * @returns {string} The formatted date string.
- */
 function formatTimestamp(timestamp) {
     if (timestamp && typeof timestamp.toDate === 'function') {
         return timestamp.toDate().toLocaleDateString();
@@ -56,16 +46,13 @@ function formatTimestamp(timestamp) {
 
 /**
  * Saves the bloomed flower data to the user's private collection in Firestore.
- * @param {Object} flowerData - The data of the flower to save.
- */
+*/
 async function saveFlowerToGarden(flowerData) {
     if (!userId) {
         console.error("Cannot save: User not authenticated.");
         return;
     }
     
-    // In local development, if we used the placeholder projectId, this will likely fail
-    // due to connection issues/auth rule violations, but it won't crash the initialization.
     if (firebaseConfig.projectId === "local-dev-project") {
         console.warn("Attempting to save data with a placeholder configuration. This will likely fail without proper setup.");
     }
@@ -90,9 +77,7 @@ async function saveFlowerToGarden(flowerData) {
     }
 }
 
-/**
- * Generates and starts the sparkle animation effect.
- */
+
 function startSparkling() {
     const overlay = document.getElementById('sparkle-overlay');
     if (overlay.classList.contains('hidden')) {
@@ -112,10 +97,7 @@ function startSparkling() {
     }
 }
 
-/**
- * Renders the garden grid based on snapshot data from Firestore.
- * @param {Array<Object>} flowers - List of flower documents.
- */
+
 function renderGarden(flowers) {
     const grid = document.getElementById('flower-grid');
     grid.innerHTML = ''; 
@@ -410,4 +392,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize to flower view
     switchView('flower');
+
 });
