@@ -28,653 +28,557 @@ if (typeof __firebase_config !== 'undefined' && __firebase_config.trim() !== '')
 
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-// Firebase initialization using the imported SDK functions
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { 
-    getAuth, 
-    signInAnonymously, 
-    signInWithCustomToken, 
-    onAuthStateChanged,
-    setPersistence,
-    browserLocalPersistence
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { 
-    getFirestore, 
-    doc, 
-    setDoc, 
-    onSnapshot, 
-    collection, 
-    query, 
-    where, 
-    getDocs, 
-    updateDoc 
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-// Initialize Firebase
-let app, db, auth;
-let userId = null;
-let isAuthReady = false;
-
-// State Variables
-let currentFlowerId = null;
-let currentFlowerData = null;
-let flowerCollection = []; // Stores the user's collected flowers
-
-// Constants
-const FLOWER_COLLECTION_PATH = `/artifacts/${appId}/users/`;
-const FLOWER_TYPES = ['Rose', 'Tulip', 'Daisy', 'Sunflower', 'Lily'];
+// --- Image Preloading Configuration ---
+const FLOWER_TYPES = ['Rose', 'Lily', 'Tulip', 'Sunflower', 'Daisy'];
 const flowerImages = {};
-const gardenBackgroundImg = new Image();
-gardenBackgroundImg.src = 'garden_background.png'; // Assuming this image is available
-
-// Preload flower images
 FLOWER_TYPES.forEach(name => {
-    const img = new Image();
-    img.src = `${name}.png`; // Assuming images like Rose.png, Tulip.png are available
-    flowerImages[name] = img;
+    flowerImages[name] = new Image();
+    flowerImages[name].src = `${name}.png`;
 });
 
-// Utility function to get the current user path (private data)
-function getPrivateFlowerCollectionRef(uid) {
-    // Path: /artifacts/{appId}/users/{userId}/flowers
-    return collection(db, `${FLOWER_COLLECTION_PATH}${uid}/flowers`);
-}
+const gardenBackgroundImg = new Image();
+gardenBackgroundImg.src = 'garden_background.png';
 
-// Utility function to get the document reference for a specific flower
-function getFlowerDocRef(flowerId) {
-    // Public data path: /artifacts/{appId}/public/data/gifts/{flowerId}
-    return doc(db, `/artifacts/${appId}/public/data/gifts`, flowerId);
-}
+// --- Global Variables ---
+let db;
+let auth;
+let currentUserId = null;
+let isAuthReady = false;
+let flowerCollection = []; // Stores the user's garden collection
 
-// --- INITIALIZATION AND AUTHENTICATION ---
+let currentGiftData = null; // Stores gift data when in gift view
 
-async function attemptSignIn() {
-    try {
-        const authInstance = getAuth(app);
-        
-        // Use browserLocalPersistence to remember the user
-        await setPersistence(authInstance, browserLocalPersistence);
+// Check if we are on the builder page or the gift page
+const isBuilderPage = window.location.pathname.toLowerCase().includes('builder.html');
 
-        if (initialAuthToken) {
-            await signInWithCustomToken(authInstance, initialAuthToken);
-        } else {
-            // Sign in anonymously if no custom token is provided
-            await signInAnonymously(authInstance);
-        }
-        console.log("Firebase: Sign-in successful.");
-    } catch (error) {
-        console.error("Firebase: Sign-in failed.", error);
-    }
-}
+// DOM Elements - Builder Page
+const senderNameInput = document.getElementById('sender-name');
+const recipientNameInput = document.getElementById('recipient-name');
+const messageInput = document.getElementById('personal-message-input');
+const generateButton = document.getElementById('generate-button');
+const copyButton = document.getElementById('copy-button');
+const linkText = document.getElementById('link-text');
+const feedbackMessage = document.getElementById('feedback-message');
+const flowerSelectionButtons = document.getElementById('flower-selection-buttons');
 
-function initializeFirebase() {
-    if (!app) {
-        app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
-        
-        // Authentication State Listener
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                userId = user.uid;
-                console.log("Firebase: User logged in. UID:", userId);
-                isAuthReady = true;
-                
-                // On the Gift page, fetch the initial flower and set up the listener
-                if (!isBuilderPage) {
-                    await checkUrlForFlowerId();
-                    setupFlowerCollectionListener();
-                } else {
-                    // Builder page logic can now run with auth ready
-                    // The function will be called directly below, but this is a safeguard
-                }
-            } else {
-                userId = null;
-                isAuthReady = false;
-                console.log("Firebase: Auth State Changed: No user logged in. Attempting sign-in...");
-                attemptSignIn(); 
-            }
-        });
-    }
-}
+// DOM Elements - Gift Page
+const gardenButton = document.getElementById('garden-button');
+const flowerView = document.getElementById('flower-view');
+const gardenView = document.getElementById('garden-view');
+const wateringCan = document.getElementById('watering-can');
+const waterCountDisplay = document.getElementById('water-count-display');
+const giftReveal = document.getElementById('gift-reveal');
+const mainFlower = document.getElementById('main-flower');
+const personalMessageEl = document.getElementById('personal-message');
+const wateringInstruction = document.getElementById('watering-instruction');
+const addToGardenButton = document.getElementById('add-to-garden-button');
+const flowerGrid = document.getElementById('flower-grid');
+const gardenGridContainer = document.getElementById('garden-grid-container');
 
+// --- Constants ---
+const WATER_COUNT_MAX = 5;
+let waterCount = 0;
+let selectedFlowerType = 'Rose'; // Default selection
 
-// --- GIFT PAGE (Gift.HTML) FUNCTIONS ---
+// --- Utility Functions ---
 
-function switchView(viewName) {
-    const flowerView = document.getElementById('flower-view');
-    const gardenView = document.getElementById('garden-view');
-    const gardenButton = document.getElementById('garden-button');
+/**
+ * Gets the base URL for the shareable link.
+ * On GitHub Pages, this includes the repository name in the path.
+ * In the Immersive, the current origin/pathname is used.
+ * @returns {string} The base URL for the Gift.HTML page.
+ */
+function getGiftPageBaseUrl() {
+    // Determine the base URL for the target Gift.HTML page
+    // This handles both local testing and GitHub Pages deployment correctly.
 
-    if (viewName === 'flower') {
-        flowerView.style.display = 'block';
-        gardenView.style.display = 'none';
-        gardenButton.textContent = 'View Garden';
-        document.body.style.backgroundColor = '#f7f3e8'; // Light background for flower view
-    } else if (viewName === 'garden') {
-        flowerView.style.display = 'none';
-        gardenView.style.display = 'block';
-        gardenButton.textContent = 'View Gift';
-        document.body.style.backgroundColor = '#6B8E23'; // Darker green background for garden
-        drawGarden(flowerCollection); // Redraw garden on switch
-    }
-}
+    // 1. Get the current origin (e.g., https://user.github.io or http://localhost:8080)
+    const origin = window.location.origin;
 
-function handleWateringClick() {
-    if (!currentFlowerData || currentFlowerData.watered_count >= currentFlowerData.clicks_to_bloom) {
-        // If already bloomed or no flower loaded, show message box but don't increment
-        showMessageBox("Your flower is already fully bloomed!", "🎉");
-        return;
-    }
-
-    // 1. Increment count locally
-    let newWateredCount = currentFlowerData.watered_count + 1;
+    // 2. Get the current repository path (e.g., /repo-name/ or just /)
+    let pathname = window.location.pathname;
     
-    // 2. Optimistic UI update
-    updateWateringProgress(newWateredCount, currentFlowerData.clicks_to_bloom);
-
-    // 3. Persist update to Firestore
-    const flowerRef = getFlowerDocRef(currentFlowerId);
-    
-    updateDoc(flowerRef, {
-        watered_count: newWateredCount
-    }).catch(error => {
-        console.error("Error updating watered count:", error);
-        showMessageBox("Failed to water the flower. Please try again.", "⚠️");
-        // Revert local state or force reload if update fails
-    });
-    
-    // Check for bloom state immediately after click
-    if (newWateredCount >= currentFlowerData.clicks_to_bloom) {
-        handleBloom();
+    // Clean the pathname to find the root folder (repo name on GitHub Pages)
+    // If we are at /repo-name/builder.html, we need /repo-name/Gift.HTML
+    if (pathname.includes('/')) {
+        // Get path up to the last slash (where the HTML files are located)
+        pathname = pathname.substring(0, pathname.lastIndexOf('/') + 1);
+    } else {
+        pathname = '/';
     }
+
+    // Combine and point to the Gift.HTML file
+    return `${origin}${pathname}Gift.HTML`;
 }
 
-function updateWateringProgress(current, total) {
-    const progressText = document.getElementById('watering-instruction');
-    const canImg = document.getElementById('watering-can');
-    const progress = Math.min(100, (current / total) * 100);
-    
-    if (progressText) {
-        progressText.innerHTML = `Keep watering! ${current} / ${total} clicks until it blooms.`;
+/**
+ * Shows a temporary feedback message to the user.
+ * @param {string} message 
+ * @param {string} type 'success' or 'error'
+ */
+function showFeedback(message, type) {
+    feedbackMessage.textContent = message;
+    feedbackMessage.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+    if (type === 'success') {
+        feedbackMessage.classList.add('bg-green-100', 'text-green-700', 'border-green-300');
+    } else if (type === 'error') {
+        feedbackMessage.classList.add('bg-red-100', 'text-red-700', 'border-red-300');
     }
-    
-    // Simple animation trigger for the watering can
-    if (canImg) {
-        canImg.src = `can_animated.gif?t=${Date.now()}`; 
-        setTimeout(() => {
-            canImg.src = `can.png`; // Revert to static image after a short delay
-        }, 500);
-    }
-}
-
-function handleBloom() {
-    const initialState = document.getElementById('initial-state');
-    const revealState = document.getElementById('gift-reveal');
-    const mainFlowerImg = document.getElementById('main-flower');
-    const personalMessage = document.getElementById('personal-message');
-    const collectButton = document.getElementById('collect-button');
-    const title = document.getElementById('flower-title');
-
-    // Check if elements exist before manipulating
-    if (initialState) initialState.style.display = 'none';
-    if (revealState) revealState.style.display = 'block';
-
-    // Update revealed content
-    if (title && currentFlowerData) title.textContent = `${currentFlowerData.recipient_name}'s Flower Gift`;
-    if (mainFlowerImg && currentFlowerData) mainFlowerImg.src = `${currentFlowerData.flower_type}.png`;
-    if (personalMessage && currentFlowerData) personalMessage.textContent = currentFlowerData.message;
-
-    // Show the collect button
-    if (collectButton) {
-        collectButton.style.display = 'block';
-        collectButton.onclick = handleCollectFlower;
-    }
-    
-    triggerSparkleEffect();
-}
-
-function showMessageBox(message, emoji) {
-    const box = document.createElement('div');
-    box.className = 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-yellow-100 border border-yellow-400 text-yellow-700 px-6 py-3 rounded-xl shadow-2xl z-50 transition-opacity duration-300';
-    box.innerHTML = `<p class="font-bold">${emoji} ${message}</p>`;
-    document.body.appendChild(box);
-
     setTimeout(() => {
-        box.style.opacity = '0';
-        box.addEventListener('transitionend', () => box.remove());
+        feedbackMessage.classList.add('hidden');
     }, 3000);
 }
 
-function triggerSparkleEffect() {
-    // A simple visual indicator for the bloom effect
-    const overlay = document.getElementById('sparkle-overlay');
-    if (!overlay) return;
-    
-    overlay.style.display = 'block';
-    overlay.className = 'absolute inset-0 bg-white opacity-0 animate-pulse rounded-2xl'; // Tailwind style for pulse effect
-    
-    setTimeout(() => {
-        overlay.style.display = 'none';
-    }, 1500);
+/**
+ * Extracts query parameters from the URL.
+ * @returns {object}
+ */
+function getQueryParams() {
+    const params = {};
+    new URLSearchParams(window.location.search).forEach((value, key) => {
+        params[key] = value;
+    });
+    return params;
 }
 
-async function handleCollectFlower() {
-    if (!currentFlowerData || !currentFlowerId || !userId) {
-        showMessageBox("Cannot collect: Data or user not ready.", "❌");
+// --- Firebase and Auth Logic ---
+
+/**
+ * Attempts to sign in using the custom token or anonymously if the token is unavailable.
+ */
+async function attemptSignIn() {
+    try {
+        if (initialAuthToken) {
+            await firebase.auth().signInWithCustomToken(initialAuthToken);
+            console.log("Signed in with custom token.");
+        } else {
+            await firebase.auth().signInAnonymously();
+            console.log("Signed in anonymously.");
+        }
+    } catch (error) {
+        console.error("Firebase Auth error during sign-in:", error);
+    }
+}
+
+/**
+ * Gets the path for the gifts collection based on the current user.
+ * We store gifts publicly under the app ID so they can be retrieved by anyone with the ID.
+ * The user's collection is for the collection of gifts they have received.
+ * @returns {string} The Firestore path.
+ */
+const getGiftDataPath = (giftId) => `artifacts/${appId}/public/data/gifts/${giftId}`;
+const getUserGardenPath = () => `artifacts/${appId}/users/${currentUserId}/garden`;
+
+/**
+ * Fetches a gift from Firestore.
+ * @param {string} giftId 
+ * @returns {object | null}
+ */
+async function fetchGiftData(giftId) {
+    if (!db) return null;
+    try {
+        const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('gifts').doc(giftId);
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+            return { id: docSnap.id, ...docSnap.data() };
+        }
+        return null;
+    } catch (error) {
+        console.error("Error fetching gift data:", error);
+        return null;
+    }
+}
+
+/**
+ * Adds the currently viewed gift to the user's garden collection.
+ */
+async function addToGarden() {
+    if (!currentGiftData || !currentUserId) {
+        showFeedback("Authentication or gift data missing. Cannot save.", 'error');
+        return;
+    }
+    if (currentGiftData.isSaved) {
+        showFeedback("This flower is already in your garden!", 'success');
         return;
     }
 
     try {
-        const flowerRef = getFlowerDocRef(currentFlowerId);
-        const privateCollectionRef = getPrivateFlowerCollectionRef(userId);
-
-        // 1. Copy the flower data (without the 'is_collected' flag) to the user's private collection
-        const flowerDataForCollection = {
-            ...currentFlowerData,
-            collected_at: new Date().toISOString()
-        };
-        // Use the public gift ID as the document ID in the private collection for easy tracing
-        await setDoc(doc(privateCollectionRef, currentFlowerId), flowerDataForCollection);
-
-        // 2. Mark the public flower document as collected and attribute the collector
-        await updateDoc(flowerRef, {
-            is_collected: true,
-            collected_by_uid: userId,
-            collected_by_name: currentFlowerData.recipient_name,
-            collected_timestamp: new Date().toISOString()
+        // Use the gift ID as the document ID in the user's garden collection
+        const docRef = db.collection('artifacts').doc(appId).collection('users').doc(currentUserId).collection('garden').doc(currentGiftData.id);
+        await docRef.set({
+            ...currentGiftData,
+            receivedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            isSaved: true
         });
-
-        showMessageBox("Flower Collected! Check your Garden.", "✅");
-        
-        // Hide the collect button immediately after success
-        const collectButton = document.getElementById('collect-button');
-        if (collectButton) {
-             collectButton.style.display = 'none';
-        }
-        
-        // Switch to the garden view immediately
-        switchView('garden');
+        currentGiftData.isSaved = true; // Update local state
+        showFeedback("Flower saved to your garden successfully!", 'success');
+        addToGardenButton.textContent = "Saved to Garden!";
+        addToGardenButton.classList.remove('bg-pink-500', 'hover:bg-pink-600');
+        addToGardenButton.classList.add('bg-gray-400', 'cursor-not-allowed');
 
     } catch (error) {
-        console.error("Error collecting flower:", error);
-        showMessageBox("Failed to collect the flower. Please try again.", "⚠️");
+        console.error("Error saving flower to garden:", error);
+        showFeedback("Failed to save flower to garden.", 'error');
     }
 }
 
+/**
+ * Sets up a real-time listener for the user's garden collection.
+ */
 function setupFlowerCollectionListener() {
-    if (!userId) return; // Wait for authentication
-    
-    const privateCollectionRef = getPrivateFlowerCollectionRef(userId);
-    
-    // Set up a real-time listener for the user's collected flowers
-    onSnapshot(privateCollectionRef, (snapshot) => {
+    if (!isAuthReady || !currentUserId || isBuilderPage) return;
+
+    const gardenRef = db.collection('artifacts').doc(appId).collection('users').doc(currentUserId).collection('garden');
+
+    gardenRef.onSnapshot(snapshot => {
         flowerCollection = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        console.log(`Garden updated: ${flowerCollection.length} flowers collected.`);
-        
-        // Only redraw the garden if the user is currently viewing it
-        if (document.getElementById('garden-view') && document.getElementById('garden-view').style.display !== 'none') {
-             drawGarden(flowerCollection);
+        console.log("Garden data updated:", flowerCollection.length, "flowers.");
+        // Redraw the garden if we are currently viewing it
+        if (gardenView.style.display !== 'none') {
+            drawGarden(flowerCollection);
         }
-    }, (error) => {
-        console.error("Error listening to flower collection:", error);
+    }, error => {
+        console.error("Error listening to garden collection:", error);
     });
 }
 
-function drawGarden(flowers) {
-    const gardenDiv = document.getElementById('flower-grid');
-    if (!gardenDiv) return;
+// --- Gift/Flower View Logic ---
 
-    // Set the overall garden background (if the image is loaded)
-    const gardenContainer = document.getElementById('garden-grid-container');
-    if (gardenContainer && gardenBackgroundImg.complete) {
-        gardenContainer.style.backgroundImage = `url(${gardenBackgroundImg.src})`;
-        gardenContainer.style.backgroundSize = 'cover';
-        gardenContainer.style.backgroundPosition = 'center';
-    } else if (gardenContainer) {
-         // Fallback color if image is not ready
-        gardenContainer.style.backgroundColor = '#7CFC00';
+/**
+ * Switches the main view on the Gift.HTML page.
+ * @param {'flower' | 'garden'} viewName 
+ */
+function switchView(viewName) {
+    if (isBuilderPage) return;
+
+    if (viewName === 'flower') {
+        flowerView.style.display = 'flex';
+        gardenView.style.display = 'none';
+        gardenButton.textContent = 'View Garden';
+        gardenButton.onclick = () => switchView('garden');
+        document.body.style.backgroundColor = '#E0FFFF'; // Light Cyan for flower view
+    } else if (viewName === 'garden') {
+        flowerView.style.display = 'none';
+        gardenView.style.display = 'flex';
+        gardenButton.textContent = 'View Gift';
+        gardenButton.onclick = () => switchView('flower');
+        document.body.style.backgroundColor = '#8FBC8F'; // Darker background for garden
+        drawGarden(flowerCollection); // Ensure it's drawn when switching
     }
+}
+
+/**
+ * Initializes the gift view with data and sets up interaction.
+ * @param {object} data The gift data object.
+ */
+function initializeGiftView(data) {
+    currentGiftData = data;
+
+    // Set up initial view
+    wateringInstruction.innerHTML = `Water the seed for <span class="text-pink-600">${data.recipientName}</span>, sent by <span class="text-blue-600">${data.senderName}</span>!`;
+
+    // Reset state
+    waterCount = 0;
+    waterCountDisplay.textContent = `Keep clicking the can! ${WATER_COUNT_MAX} clicks to bloom!`;
+    wateringCan.style.display = 'block';
+    giftReveal.style.display = 'none';
+    addToGardenButton.style.display = 'none'; // Hide until bloomed
     
-    gardenDiv.innerHTML = '';
+    // Reset save button state
+    addToGardenButton.textContent = "Save to My Garden";
+    addToGardenButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+    addToGardenButton.classList.add('bg-pink-500', 'hover:bg-pink-600');
+
+    // Watering Can Click Handler
+    wateringCan.onclick = () => {
+        if (waterCount < WATER_COUNT_MAX) {
+            waterCount++;
+            const remaining = WATER_COUNT_MAX - waterCount;
+            waterCountDisplay.textContent = `Keep clicking! ${remaining} clicks remaining!`;
+            wateringCan.classList.add('shake');
+            setTimeout(() => wateringCan.classList.remove('shake'), 500);
+
+            if (waterCount >= WATER_COUNT_MAX) {
+                bloomFlower(data);
+            }
+        }
+    };
+
+    addToGardenButton.onclick = addToGarden;
     
-    if (flowers.length === 0) {
-        gardenDiv.innerHTML = `
-            <div class="text-center p-10 col-span-full">
-                <p class="text-white text-2xl font-semibold mb-2 drop-shadow-md">Your garden is empty!</p>
-                <p class="text-gray-200 text-lg drop-shadow-sm">Receive a gift link to start collecting flowers.</p>
-            </div>
-        `;
+    // Ensure flower view is visible if we loaded data
+    document.getElementById('status-message').style.display = 'none';
+    flowerView.style.display = 'flex';
+    switchView('flower');
+}
+
+/**
+ * Transition the view from watering to the revealed flower.
+ * @param {object} data The gift data.
+ */
+function bloomFlower(data) {
+    wateringCan.style.display = 'none';
+    document.getElementById('initial-state').style.display = 'none'; // Hide the entire initial state container
+
+    mainFlower.src = flowerImages[data.flowerType].src;
+    mainFlower.alt = `${data.flowerType} Flower`;
+    personalMessageEl.textContent = data.personalMessage || "No message provided.";
+
+    giftReveal.style.display = 'block';
+    addToGardenButton.style.display = 'inline-flex'; // Show save button
+
+    // Check if flower is already saved (requires user ID to be ready)
+    if (isAuthReady && currentUserId) {
+         const docRef = db.collection('artifacts').doc(appId).collection('users').doc(currentUserId).collection('garden').doc(data.id);
+         docRef.get().then(docSnap => {
+             if (docSnap.exists) {
+                currentGiftData.isSaved = true;
+                addToGardenButton.textContent = "Saved to Garden!";
+                addToGardenButton.classList.remove('bg-pink-500', 'hover:bg-pink-600');
+                addToGardenButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+             }
+         }).catch(e => console.error("Could not check if saved:", e));
+    }
+}
+
+/**
+ * Draws the current collection of flowers in the garden grid.
+ * @param {Array<object>} collection The array of flower gift objects.
+ */
+function drawGarden(collection) {
+    flowerGrid.innerHTML = ''; // Clear previous cards
+    const gardenEmptyMessage = document.getElementById('garden-empty-message');
+
+    if (collection.length === 0) {
+        gardenEmptyMessage.style.display = 'block';
         return;
     }
+    gardenEmptyMessage.style.display = 'none';
 
-    // Grid layout for cards (can be adjusted in style.css for better visual garden effect)
-    gardenDiv.style.display = 'grid';
-    gardenDiv.style.gridTemplateColumns = 'repeat(auto-fit, minmax(200px, 1fr))';
-    gardenDiv.style.gap = '20px';
-    
-    flowers.forEach(flower => {
+    collection.forEach(flower => {
+        const flowerType = flower.flowerType || 'Rose';
         const card = document.createElement('div');
-        card.className = 'flower-card bg-white p-4 rounded-xl shadow-2xl transition duration-300 hover:scale-[1.03] flex flex-col items-center';
-
-        const collectedDate = new Date(flower.collected_at).toLocaleDateString();
-
+        card.className = 'flower-card';
         card.innerHTML = `
-            <img src="${flower.flower_type}.png" alt="${flower.flower_type}" class="w-32 h-32 object-contain mb-3">
-            <h3 class="text-xl font-bold text-gray-800">${flower.flower_type} for ${flower.recipient_name}</h3>
-            <p class="text-sm text-gray-500 mb-2">Collected on: ${collectedDate}</p>
-            <div class="message-preview w-full">
-                <p class="text-sm italic overflow-hidden text-ellipsis whitespace-nowrap">"${flower.message.substring(0, 50)}..."</p>
+            <img src="${flowerImages[flowerType].src}" alt="${flowerType}" onerror="this.src='Rose.png'">
+            <h3 class="text-xl font-semibold text-gray-800">${flowerType}</h3>
+            <p class="text-sm text-gray-500 mt-1">From: ${flower.senderName || 'Anonymous'}</p>
+            <div class="message-preview mt-3">
+                ${flower.personalMessage || 'No personal message.'}
             </div>
         `;
-        gardenDiv.appendChild(card);
+        flowerGrid.appendChild(card);
     });
 }
 
-
+/**
+ * Checks the URL for a giftId and loads the corresponding flower if found.
+ */
 async function checkUrlForFlowerId() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const id = urlParams.get('id');
-    
-    if (id) {
-        currentFlowerId = id;
-        console.log(`URL parameter found: Flower ID ${currentFlowerId}.`);
-        
-        // Setup real-time listener for the specific gift document
-        const flowerRef = getFlowerDocRef(currentFlowerId);
-        onSnapshot(flowerRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                currentFlowerData = data;
-                
-                // Set the initial recipient name for the title
-                const titleElement = document.getElementById('flower-title');
-                if (titleElement) {
-                    titleElement.textContent = `${data.recipient_name}'s Flower Gift`;
-                }
+    const params = getQueryParams();
+    if (params.giftId) {
+        document.getElementById('status-message').textContent = 'Loading gift...';
+        document.getElementById('status-message').style.display = 'block';
 
-                // Check if the flower has bloomed or if it's collected
-                if (data.is_collected) {
-                    showMessageBox("This flower has already been collected and is in your garden!", "🏠");
-                    // Optionally redirect to garden view
-                    switchView('garden');
-                    return;
-                } else if (data.watered_count >= data.clicks_to_bloom) {
-                    // Bloomed, but not collected
-                    handleBloom();
-                } else {
-                    // Still in the watering stage
-                    updateWateringProgress(data.watered_count, data.clicks_to_bloom);
-                    const canImg = document.getElementById('watering-can');
-                    if (canImg) {
-                        canImg.onclick = handleWateringClick;
-                    }
-                }
-            } else {
-                showMessageBox("This flower gift link is invalid or has expired.", "⚠️");
-                // Hide main view content if invalid
-                const flowerView = document.getElementById('flower-view');
-                if (flowerView) {
-                    flowerView.innerHTML = '<h1 class="text-3xl font-bold text-red-500">Invalid Gift Link</h1>';
-                }
-            }
-        }, (error) => {
-             console.error("Error listening to gift document:", error);
-             showMessageBox("Failed to load gift data.", "❌");
-        });
-        
+        const giftData = await fetchGiftData(params.giftId);
+
+        if (giftData) {
+            giftData.id = params.giftId; // Ensure the ID is attached
+            initializeGiftView(giftData);
+        } else {
+            document.getElementById('status-message').textContent = 'Gift not found or has expired.';
+            document.getElementById('status-message').style.display = 'block';
+            flowerView.style.display = 'none';
+        }
     } else {
-        // No ID in URL - This is the landing page/no gift received.
-        const flowerView = document.getElementById('flower-view');
-        if (flowerView) {
-            flowerView.innerHTML = `
-                <div class="p-10 text-center">
-                    <h1 class="text-3xl font-bold text-gray-700 mb-4">Welcome to Your Garden!</h1>
-                    <p class="text-gray-500">You haven't received a flower gift yet. Ask a friend to send you one!</p>
-                </div>
-            `;
-        }
-        const gardenButton = document.getElementById('garden-button');
-        if (gardenButton) {
-            gardenButton.textContent = 'View Garden';
-        }
-        // Immediately switch to garden view if no ID is present
+        // If no gift ID and we are on Gift.HTML, default to garden view
         switchView('garden');
     }
 }
 
-// --- BUILDER PAGE (builder.html) FUNCTIONS ---
 
-let builderState = {
-    flower_type: FLOWER_TYPES[0], // Default to the first type
-};
+// --- Builder Logic ---
 
-// Function to populate flower selector in builder.html
-function populateFlowerSelector() {
-    const selectorDiv = document.getElementById('flower-selector');
-    const placeholder = document.getElementById('flower-selector-placeholder');
-    if (!selectorDiv) return;
+/**
+ * Renders the flower selection buttons in the builder view.
+ */
+function renderFlowerSelection() {
+    if (!flowerSelectionButtons) return; // Only run on builder.html
 
-    if (placeholder) {
-        placeholder.remove(); // Remove placeholder once content is ready to be populated
-    }
-    
-    selectorDiv.innerHTML = ''; // Clear existing content (like the placeholder)
+    flowerSelectionButtons.innerHTML = '';
 
-    FLOWER_TYPES.forEach(flowerName => {
-        const isSelected = flowerName === builderState.flower_type;
+    FLOWER_TYPES.forEach(type => {
         const button = document.createElement('button');
-        
-        // Use a consistent class name and manage selection via border/background
-        button.className = `flower-button p-3 rounded-xl border-4 transition duration-200 shadow-md ${isSelected ? 'border-[#7B68EE] bg-indigo-50' : 'border-gray-200 bg-white hover:border-[#7B68EE]'}`;
-        button.innerHTML = `<img src="${flowerName}.png" alt="${flowerName}" class="w-16 h-16 object-contain">`;
-        
+        button.className = 'flower-button p-3 rounded-xl border-2 font-medium transition duration-150 shadow-md';
+        button.textContent = type;
+        button.setAttribute('data-flower', type);
+
         button.onclick = () => {
-            builderState.flower_type = flowerName;
-            populateFlowerSelector(); // Re-render to update selection style
+            selectedFlowerType = type;
+            // Visually update buttons
+            document.querySelectorAll('.flower-button').forEach(btn => {
+                btn.classList.remove('bg-[#6495ED]', 'text-white', 'border-[#6495ED]');
+                btn.classList.add('bg-white', 'text-gray-700', 'border-gray-300');
+            });
+            button.classList.add('bg-[#6495ED]', 'text-white', 'border-[#6495ED]');
+            button.classList.remove('bg-white', 'text-gray-700', 'border-gray-300');
         };
-        selectorDiv.appendChild(button);
+
+        flowerSelectionButtons.appendChild(button);
     });
+
+    // Trigger click on the default type to set initial style
+    const defaultButton = flowerSelectionButtons.querySelector(`[data-flower="${selectedFlowerType}"]`);
+    if (defaultButton) {
+        defaultButton.click();
+    }
 }
 
-function validateInputs(recipientName, message, clicks) {
-    if (!recipientName.trim()) {
-        showMessageBox("Please enter the recipient's name.", "🚫");
-        return false;
-    }
-    if (!message.trim()) {
-        showMessageBox("Please enter your personal message.", "🚫");
-        return false;
-    }
-    const clickCount = parseInt(clicks, 10);
-    if (isNaN(clickCount) || clickCount < 5 || clickCount > 100) {
-        showMessageBox("Clicks to Bloom must be between 5 and 100.", "🚫");
-        return false;
-    }
-    return true;
-}
+/**
+ * Handles the generation of the gift link and saving the gift data.
+ */
+async function handleGenerateGift() {
+    const senderName = senderNameInput.value.trim() || 'A Secret Admirer';
+    const recipientName = recipientNameInput.value.trim() || 'A Kind Soul';
+    const personalMessage = messageInput.value.trim() || 'Wishing you the best.';
 
-async function generateGiftLink() {
-    const recipientNameInput = document.getElementById('recipient-name');
-    const messageInput = document.getElementById('personal-message');
-    const clicksInput = document.getElementById('watering-clicks');
-    
-    // Check if elements exist before accessing .value
-    if (!recipientNameInput || !messageInput || !clicksInput) {
-        console.error("Missing input fields in builder.html.");
-        showMessageBox("Error: Form elements not found.", "❌");
+    if (!isAuthReady || !db) {
+        showFeedback("App is still initializing. Please wait a moment.", 'error');
         return;
     }
-    
-    const recipientName = recipientNameInput.value.trim();
-    const message = messageInput.value.trim();
-    const clicks = clicksInput.value;
-    const flowerType = builderState.flower_type;
-    
-    if (!validateInputs(recipientName, message, clicks)) {
-        return;
+
+    if (personalMessage.length > 500) {
+         showFeedback("Message is too long (max 500 characters).", 'error');
+         return;
     }
-    
-    if (!db) {
-        showMessageBox("Database connection not ready. Please wait a moment.", "⚠️");
-        return;
-    }
+
+    const giftData = {
+        senderName,
+        recipientName,
+        personalMessage,
+        flowerType: selectedFlowerType,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
 
     try {
-        const giftData = {
-            recipient_name: recipientName,
-            message: message,
-            clicks_to_bloom: parseInt(clicks, 10),
-            flower_type: flowerType,
-            watered_count: 0,
-            is_collected: false, // Flag for if the gift has been collected into a user's garden
-            created_at: new Date().toISOString()
-        };
-
-        // Public data path: /artifacts/{appId}/public/data/gifts/{flowerId}
-        const giftCollectionRef = collection(db, `/artifacts/${appId}/public/data/gifts`);
+        // Save the gift data to a new document in the public 'gifts' collection
+        const giftsRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('gifts');
+        const newGiftDoc = await giftsRef.add(giftData);
+        const giftId = newGiftDoc.id;
         
-        // Add the document to the public gifts collection
-        const newGiftDocRef = doc(giftCollectionRef);
-        await setDoc(newGiftDocRef, giftData);
-        
-        const newGiftId = newGiftDocRef.id;
-        
-        // Construct the shareable link (assuming Gift.HTML is in the same directory)
-        const giftUrl = `${window.location.origin}${window.location.pathname.replace('builder.html', 'Gift.HTML')}?id=${newGiftId}`;
+        // --- FIX APPLIED HERE ---
+        // Construct the shareable link using the calculated base URL for the Gift.HTML page
+        const giftPageBaseUrl = getGiftPageBaseUrl();
+        const shareableLink = `${giftPageBaseUrl}?giftId=${giftId}`;
+        // --- END FIX ---
 
         // Display the link and copy button
-        const linkText = document.getElementById('link-text');
-        const copyButton = document.getElementById('copy-button');
-        
-        if (linkText) {
-            linkText.textContent = giftUrl;
-            linkText.classList.remove('hidden');
-        }
-        
-        if (copyButton) {
-            copyButton.classList.remove('hidden');
-            
-            // Add copy functionality
-            copyButton.onclick = () => {
-                 // Using document.execCommand('copy') for better compatibility in iFrames
-                const tempInput = document.createElement('textarea');
-                tempInput.value = giftUrl;
-                document.body.appendChild(tempInput);
-                tempInput.select();
-                document.execCommand('copy');
-                document.body.removeChild(tempInput);
+        linkText.textContent = shareableLink;
+        linkText.classList.remove('hidden');
+        copyButton.classList.remove('hidden');
 
-                copyButton.textContent = 'Copied!';
-                setTimeout(() => {
-                    copyButton.textContent = 'Copy Link to Clipboard';
-                }, 2000);
-            };
-        }
-        
-        showMessageBox("Gift Link Generated Successfully!", "🔗");
+        showFeedback("Gift link generated successfully!", 'success');
+        console.log("Generated Link:", shareableLink);
 
     } catch (error) {
-        console.error("Error generating gift link:", error);
-        showMessageBox("Failed to generate link. Check inputs and console.", "❌");
+        console.error("Error creating gift:", error);
+        showFeedback("Error creating gift. Check console for details.", 'error');
     }
 }
 
-function updateMessageCharCount() {
-    const messageInput = document.getElementById('personal-message');
-    const countSpan = document.getElementById('message-char-count');
-    if (messageInput && countSpan) {
-        countSpan.textContent = messageInput.value.length;
-    }
+/**
+ * Copies the generated link to the clipboard.
+ */
+function handleCopyLink() {
+    const linkToCopy = linkText.textContent;
+     // Use temporary textarea for copy compatibility
+    const tempInput = document.createElement('textarea');
+    tempInput.value = linkToCopy;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    document.execCommand('copy');
+    document.body.removeChild(tempInput);
+    showFeedback("Link copied to clipboard!", 'success');
 }
 
-function handleBuilderPage() {
-    console.log("Builder Page: Initializing UI and listeners.");
-    
-    // 1. Setup Flower Selector UI
-    populateFlowerSelector(); 
-    
-    // 2. Setup Generate Button Listener
-    const generateButton = document.getElementById('generate-button');
-    if (generateButton) {
-        generateButton.onclick = generateGiftLink;
-    }
 
-    // 3. Setup Character Count Listener
-    const messageInput = document.getElementById('personal-message');
-    if (messageInput) {
-        messageInput.addEventListener('input', updateMessageCharCount);
-        updateMessageCharCount(); // Initial count
-    }
+// --- Initialization ---
 
-    // 4. Setup Enter Key for Clicks Input (optional but nice UX)
-    const clicksInput = document.getElementById('watering-clicks');
-    if (clicksInput) {
-        clicksInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault(); // Prevent form submission
-                generateGiftLink();
+window.onload = function() {
+    // Initialize Firebase
+    if (Object.keys(firebaseConfig).length > 0) {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        auth = firebase.auth();
+    } else {
+        console.error('Firebase configuration not found.');
+        return;
+    }
+    
+    // Set up Auth State Listener
+    firebase.auth().onAuthStateChanged(user => {
+        if (user) {
+            currentUserId = user.uid;
+            isAuthReady = true;
+            console.log("Auth State Changed: User logged in.", currentUserId);
+            
+            // Only set up listeners and views based on the current page
+            if (isBuilderPage) {
+                renderFlowerSelection();
+            } else {
+                setupFlowerCollectionListener();
+                checkUrlForFlowerId();
             }
-        });
-    }
-
-    // Initialize state with default values if not already set
-    if (!builderState.flower_type) {
-        builderState.flower_type = FLOWER_TYPES[0];
-        populateFlowerSelector();
-    }
-}
-
-// --- MAIN EXECUTION ---
-
-const isBuilderPage = document.title.includes('Create Your Personalized Flower Gift');
-
-// Ensure Firebase is initialized regardless of page type
-initializeFirebase();
-
-// Run page-specific logic after initialization
-if (isBuilderPage) {
-    // Only run builder setup after the DOM is fully loaded
-    document.addEventListener('DOMContentLoaded', handleBuilderPage);
-} 
-// Logic for Gift.HTML is handled in the onAuthStateChanged listener and checkUrlForFlowerId
-// (The onAuthStateChanged listener will call checkUrlForFlowerId and setupFlowerCollectionListener)
-
-// Re-draw the garden once all assets are loaded (including the new background image)
-let assetsLoaded = 0;
-const totalAssets = FLOWER_TYPES.length + 1; // +1 for the background image
-
-const checkAssets = () => {
-    assetsLoaded++;
-    if (assetsLoaded === totalAssets) {
-        // Once all images are loaded, ensure the garden is drawn correctly
-        if (!isBuilderPage && flowerCollection.length > 0) {
-             drawGarden(flowerCollection);
+            
+        } else {
+            console.log("Auth State Changed: No user logged in. Attempting sign-in...");
+            attemptSignIn(); 
         }
-        // No action needed for builder page here, as flower selector images are handled by the browser
-    }
-};
+    });
 
-// Load background image
-if(gardenBackgroundImg.complete) {
-    checkAssets();
-} else {
-    gardenBackgroundImg.onload = checkAssets;
-    gardenBackgroundImg.onerror = () => {
-        console.error(`Failed to load image: garden_background.png`);
-        checkAssets(); // Count as loaded even if failed
+    // Event listeners
+    if (isBuilderPage) {
+        generateButton.onclick = handleGenerateGift;
+        copyButton.onclick = handleCopyLink;
+    } else {
+        gardenButton.onclick = () => switchView('garden'); // Initial assignment
     }
-}
-
-// Load flower images
-FLOWER_TYPES.forEach(name => {
-    if(flowerImages[name].complete) {
+    
+    // Re-draw the garden once all assets are loaded (including the new background image)
+    let assetsLoaded = 0;
+    const totalAssets = FLOWER_TYPES.length + 1; // +1 for the background image
+    
+    const checkAssets = () => {
+        assetsLoaded++;
+        if (assetsLoaded === totalAssets) {
+            // Once all images are loaded, ensure the garden is drawn correctly
+            if (!isBuilderPage && flowerCollection.length > 0) {
+                 drawGarden(flowerCollection);
+            }
+        }
+    };
+    
+    // Load background image
+    if(gardenBackgroundImg.complete) {
         checkAssets();
     } else {
-        flowerImages[name].onload = checkAssets;
-        flowerImages[name].onerror = () => {
-            console.error(`Failed to load image: ${name}.png`);
+        gardenBackgroundImg.onload = checkAssets;
+        gardenBackgroundImg.onerror = () => {
+            console.error(`Failed to load image: garden_background.png`);
             checkAssets(); // Count as loaded even if failed
         }
     }
-});
+
+    // Load flower images
+    FLOWER_TYPES.forEach(name => {
+        if(flowerImages[name].complete) {
+            checkAssets();
+        } else {
+            flowerImages[name].onload = checkAssets;
+            flowerImages[name].onerror = () => {
+                console.error(`Failed to load image: ${name}.png`);
+                checkAssets(); // Count as loaded even if failed
+            }
+        }
+    });
+};
