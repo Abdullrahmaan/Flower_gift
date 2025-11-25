@@ -3,12 +3,12 @@
 // =========================================================
 // !!! PASTE YOUR REAL FIREBASE CONFIG HERE !!!
 const firebaseConfig = {
-    apiKey: "YOUR_REAL_API_KEY_HERE", 
-    authDomain: "your-project-id.firebaseapp.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project-id.appspot.com",
-    messagingSenderId: "1234567890",
-    appId: "1:1234567890:web:xxxxxxxxxxxx"
+  apiKey: "AIzaSyCC1QeQsUiSxLoKTJfAomwuW2CPJsYe5mU",
+  authDomain: "flower-gift-b16b9.firebaseapp.com",
+  projectId: "flower-gift-b16b9",
+  storageBucket: "flower-gift-b16b9.firebasestorage.app",
+  messagingSenderId: "508370263382",
+  appId: "1:508370263382:web:27c88f5cf0a9b3435d0af7"
 };
 
 let db, auth;
@@ -269,3 +269,4 @@ document.addEventListener('DOMContentLoaded', () => {
     // It's safe to run on both if the functions check for the existence of UI elements.
     initializeViewer();
 });
+
