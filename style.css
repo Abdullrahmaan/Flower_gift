@@ -1,278 +1,134 @@
-/* --- Global Styles --- */
+/* -------------------------------------------------------------------------
+   GLOBAL STYLES & LAYOUT
+   (Primarily for non-Tailwind-compatible custom behaviors)
+------------------------------------------------------------------------- */
 body {
-    font-family: 'Arial', sans-serif;
+    /* Base font settings and central alignment for the whole page */
+    font-family: 'Inter', sans-serif;
     display: flex;
     flex-direction: column;
     align-items: center;
     min-height: 100vh;
     margin: 0;
-    transition: background-color 0.5s ease;
+    transition: background-color 0.5s ease; /* For theme transitions */
     padding: 20px;
     box-sizing: border-box;
-    background-color: #f7f3e8; /* Default fallback */
-}
-
-h1, h2, p {
-    color: #333;
-    text-align: center;
-}
-
-.container {
-    /* Main gift card container style */
-    background: rgba(255, 255, 255, 0.9);
-    padding: 30px;
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-    max-width: 400px;
-    width: 90%;
-    margin-top: 40px;
-    position: relative;
-    z-index: 10;
+    background-color: #f7f3e8; /* Default fallback background */
 }
 
 .hidden {
-    opacity: 0;
-    pointer-events: none;
-    /* Use display: none to completely remove from flow when in the initial state */
-    display: none; 
+    /* Utility class for complete removal from flow */
+    display: none !important;
 }
 
-/* --- Watering State (Initial View) --- */
+/* -------------------------------------------------------------------------
+   FLOWER VIEW (The Interactive Gift)
+------------------------------------------------------------------------- */
+
+/* Initial state of the flower image (start small) */
+#main-flower-pre {
+    transition: all 1s ease-out;
+    transform: scale(0.5);
+    opacity: 0.5;
+}
+
+/* Watering Can interaction effects */
 #watering-can {
-    display: block;
-    width: 150px;
-    height: 150px;
-    margin: 30px auto;
     cursor: pointer;
-    transition: transform 0.1s ease-out;
-    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+    transition: transform 0.2s;
 }
 
-#initial-state h1 {
-    font-size: 1.25em;
-    color: #555;
-    min-height: 50px; /* Prevent layout shift when text changes */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 10px;
+#watering-can:hover {
+    transform: scale(1.05);
 }
 
-/* --- Gift Reveal State (Bloomed Flower View) --- */
-#gift-reveal {
-    transition: opacity 1s ease-in;
-    position: relative; 
-    text-align: center;
-    opacity: 0;
-    /* Ensure it starts hidden and then fades in */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+#watering-can:active {
+    transform: scale(0.95);
 }
 
-#gift-reveal h2 {
-    color: #d9534f; /* Soft red for emphasis */
-    font-size: 1.8em;
-    margin-bottom: 10px;
+/* Message Box for the revealed note */
+.message-box {
+    position: relative;
+    animation: fadeIn 1s ease-in-out;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-#main-flower {
-    width: 180px;
-    height: 180px;
-    margin: 20px auto;
-    display: block;
-    transform: scale(0.5); /* Start small */
-    opacity: 0;
-    /* Bloomed state with springy transition */
-    transition: transform 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 1s; 
-    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.2));
-}
-
-#main-flower.bloomed {
-    transform: scale(1);
-    opacity: 1;
-}
-
-#personal-message {
-    padding: 15px;
-    background: #fff;
-    border: 2px solid #a3d4a3; /* Light green border to fit garden theme */
-    border-radius: 10px;
-    white-space: pre-wrap;
-    text-align: left;
-    min-height: 50px;
-    font-style: italic;
-    color: #444;
-    width: 100%;
-    box-sizing: border-box;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-}
-
-/* --- Sparkle Effect --- */
+/* -------------------------------------------------------------------------
+   SPARKLE ANIMATION (Gift Reveal Effect)
+------------------------------------------------------------------------- */
 #sparkle-overlay {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none; 
+    pointer-events: none;
     overflow: hidden;
-    z-index: 1; /* Below the text content, but over the background */
+    z-index: 50;
 }
 
 .sparkle {
     position: absolute;
     width: 8px;
     height: 8px;
-    background: gold;
     border-radius: 50%;
-    box-shadow: 0 0 5px gold, 0 0 10px yellow;
-    animation: sparkle-fade 2s infinite ease-out;
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+    animation: moveUpFade 3s forwards;
     opacity: 0;
 }
 
-@keyframes sparkle-fade {
-    0% {
-        opacity: 0;
-        transform: scale(0);
-    }
-    20% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    100% {
-        opacity: 0;
-        transform: scale(0.5) translateY(-50px);
-    }
+@keyframes moveUpFade {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    50% { opacity: 0.8; }
+    100% { opacity: 0; transform: translateY(-100px) scale(0.5); }
 }
 
-/* --- Garden View --- */
+/* -------------------------------------------------------------------------
+   GARDEN VIEW (Canvas & Collection)
+------------------------------------------------------------------------- */
 #garden-view {
-    display: none;
-    width: 90%;
-    max-width: 1000px;
-    margin: 40px auto;
-    padding: 30px;
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 20px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-}
-
-#garden-view h2 {
-    color: #38761d;
-    margin-bottom: 25px;
-    font-size: 2em;
-    border-bottom: 3px solid #e0e0e0;
-    padding-bottom: 10px;
-}
-
-#flower-grid {
-    display: grid;
-    /* Responsive grid: min 200px wide, 1fr max */
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 20px;
-}
-
-.flower-card {
-    border: 1px solid #ddd;
-    border-radius: 15px;
-    padding: 15px;
+    /* Container for the garden */
+    background-color: #4B5320; /* Deep forest green / dark olive */
+    min-height: 100vh;
+    padding: 4rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
-    overflow: hidden;
-    position: relative;
-    color: #333; /* Ensure text visibility against dynamic background */
 }
 
-.flower-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+#garden-canvas {
+    /* Styling for the pixel art canvas */
+    border: 8px solid #383e18;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    max-width: 100%;
+    height: auto;
+    image-rendering: pixelated; /* Ensures sharp scaling for pixel art */
+    margin: 20px auto;
 }
 
-.flower-card img {
-    width: 80px;
-    height: 80px;
-    margin-bottom: 10px;
-}
-
-.flower-card strong {
-    display: block;
-    font-size: 1.1em;
-    color: #2c3e50;
-    margin-bottom: 5px;
-}
-
-.flower-card .date {
-    font-size: 0.8em;
-    color: #666;
-    margin: 0 0 10px 0;
-}
-
-.flower-card .message-preview {
-    background: rgba(255, 255, 255, 0.7);
-    padding: 10px;
-    border-radius: 8px;
-    font-size: 0.9em;
-    color: #444;
-    text-align: left;
-    max-height: 60px;
-    overflow: hidden;
-    line-height: 1.4;
-    border-left: 3px solid #5cb85c;
-}
-
-/* --- Button Styling --- */
-#garden-button {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 25px; /* Pill shape */
-    background-color: #4CAF50; /* Green theme */
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-    transition: background-color 0.3s, transform 0.1s, box-shadow 0.3s;
+/* -------------------------------------------------------------------------
+   MODAL (Flower Details)
+------------------------------------------------------------------------- */
+.modal {
+    background-color: rgba(0, 0, 0, 0.6);
     z-index: 100;
-    letter-spacing: 0.5px;
 }
 
-#garden-button:hover {
-    background-color: #43A047;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+.close-button {
+    font-size: 2.5rem;
+    line-height: 1;
+    position: absolute;
+    top: 0.5rem;
+    right: 1.25rem;
+    cursor: pointer;
+    color: #9ca3af; /* Gray-400 */
 }
 
-/* --- Mobile Responsiveness --- */
-@media (max-width: 600px) {
-    .container {
-        padding: 20px;
-        margin-top: 20px;
-    }
-
-    #garden-view {
-        width: 100%;
-        margin: 20px auto;
-        padding: 15px;
-    }
-
-    #flower-grid {
-        grid-template-columns: 1fr; /* Stack cards vertically on small screens */
-    }
-
-    #watering-can {
-        width: 120px;
-        height: 120px;
-    }
-
-    #garden-button {
-        top: 10px;
-        right: 10px;
-        padding: 8px 15px;
-        font-size: 0.9em;
-    }
+.close-button:hover {
+    color: #1f2937; /* Gray-800 */
 }
