@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎁 A Gift For You</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fcfcfc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.8s ease;
+        }
+
+        /* Animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        
+        @keyframes grow {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-grow { animation: grow 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        .hidden { display: none !important; }
+
+        /* Garden Canvas */
+        #garden-canvas {
+            border: 8px solid rgba(0,0,0,0.2);
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            image-rendering: pixelated; /* Sharp pixel art */
+            max-width: 90vw;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="nav-btn" onclick="toggleGarden()" class="fixed top-5 right-5 hidden bg-white/80 backdrop-blur text-gray-800 px-4 py-2 rounded-full shadow-lg font-bold hover:bg-white transition z-50">
+        View Garden 🪴
+    </button>
+
+    <div id="gift-container" class="w-full max-w-md p-6">
+        <div class="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-2xl text-center border-2 border-white/50">
+            
+            <div id="stage-seed">
+                <h1 class="text-3xl font-extrabold text-gray-800 mb-2">A Gift Arrived!</h1>
+                <p id="instruction-text" class="text-gray-500 mb-8">It needs some love to grow.</p>
+                
+                <div class="relative h-64 flex items-center justify-center">
+                    <div id="watering-can" onclick="waterPlant()" class="cursor-pointer transition transform active:rotate-12 active:scale-95 z-10 hover:scale-105">
+                        <img src="https://placehold.co/120x120/5cb85c/fff?text=🚿" class="animate-float mx-auto drop-shadow-xl">
+                        <p class="mt-2 text-sm font-bold text-green-600 bg-green-100 inline-block px-3 py-1 rounded-full">Tap Me!</p>
+                    </div>
+                    
+                    <img id="sprout-img" src="https://placehold.co/80x80/8B4513/fff?text=🌱" class="absolute bottom-0 opacity-50 transition-all duration-500">
+                </div>
+
+                <div class="w-full bg-gray-200 rounded-full h-4 mt-6 overflow-hidden">
+                    <div id="progress-bar" class="bg-[#7B68EE] h-4 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <p id="clicks-left-text" class="mt-2 text-xs text-gray-400">0% Grown</p>
+            </div>
+
+            <div id="stage-bloom" class="hidden">
+                <h1 class="text-4xl font-extrabold text-[#7B68EE] mb-4 animate-bounce">It Bloomed!</h1>
+                
+                <div class="bg-gradient-to-b from-transparent to-yellow-50/50 p-6 rounded-xl">
+                    <img id="final-flower" src="" class="w-48 h-48 mx-auto mb-6 object-contain animate-grow drop-shadow-2xl">
+                    
+                    <div class="bg-white p-6 rounded-xl shadow-inner border border-gray-100 transform -rotate-1">
+                        <p class="text-gray-400 text-xs uppercase tracking-widest mb-2">Message</p>
+                        <p id="message-text" class="text-xl text-gray-800 font-medium italic leading-relaxed"></p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="garden-container" class="hidden w-full h-screen flex flex-col items-center justify-center p-4">
+        <h1 class="text-4xl font-bold text-white mb-6 drop-shadow-md">Your Personal Garden</h1>
+        <canvas id="garden-canvas"></canvas>
+        <p class="text-white/70 mt-4 text-sm">Every flower you receive lives here.</p>
+    </div>
+
+    <script>
+        // =========================================================
+        // 1. FIREBASE CONFIGURATION (PASTE YOUR KEYS HERE)
+        // =========================================================
+        const firebaseConfig = {
+            apiKey: "PASTE_YOUR_API_KEY_HERE",
+            authDomain: "PASTE_YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "PASTE_YOUR_PROJECT_ID",
+            storageBucket: "PASTE_YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "PASTE_YOUR_SENDER_ID",
+            appId: "PASTE_YOUR_APP_ID"
+        };
+        // =========================================================
+
+        // Initialize App
+        let db, auth;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            auth = firebase.auth();
+            // Sign in anonymously to save data
+            auth.signInAnonymously().catch(e => console.error("Auth Error", e));
+        } catch (e) {
+            console.error("Firebase Init Failed:", e);
+        }
+
+        // Assets & Config
+        const IMAGES = {
+            'Rose': 'https://placehold.co/200x200/FF69B4/000?text=Rose',
+            'Tulip': 'https://placehold.co/200x200/FFD700/000?text=Tulip',
+            'Daisy': 'https://placehold.co/200x200/FFFFFF/000?text=Daisy',
+            'Orchid': 'https://placehold.co/200x200/A020F0/000?text=Orchid'
+        };
+
+        const THEMES = {
+            'Forest': '#4B5320',
+            'Lavender': '#E6E6FA',
+            'Sunshine': '#FFFACD',
+            'Ocean': '#E0F7FA'
+        };
+
+        // State
+        let giftData = {};
+        let currentClicks = 0;
+        let totalClicks = 0;
+        let isGardenOpen = false;
+
+        // ---------------------------------------------------------
+        // INITIALIZATION
+        // ---------------------------------------------------------
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            
+            // Check if URL has gift data
+            if (params.has('flower')) {
+                giftData = {
+                    flower: params.get('flower'),
+                    message: decodeURIComponent(params.get('message')),
+                    theme: params.get('theme'),
+                    clicks: parseInt(params.get('clicks')) || 3
+                };
+                
+                totalClicks = giftData.clicks;
+                
+                // Set Theme Background immediately
+                if (THEMES[giftData.theme]) {
+                    document.body.style.backgroundColor = THEMES[giftData.theme];
+                }
+
+            } else {
+                // If no data, show error or empty garden
+                document.getElementById('instruction-text').innerText = "No gift found! (Check your link)";
+                document.getElementById('watering-can').classList.add('hidden');
+            }
+        });
+
+        // ---------------------------------------------------------
+        // WATERING LOGIC
+        // ---------------------------------------------------------
+        function waterPlant() {
+            if (currentClicks < totalClicks) {
+                currentClicks++;
+                
+                // Update Progress Bar
+                const percentage = (currentClicks / totalClicks) * 100;
+                document.getElementById('progress-bar').style.width = `${percentage}%`;
+                document.getElementById('clicks-left-text').innerText = `${Math.round(percentage)}% Grown`;
+
+                // Update Sprout Visuals (Grow)
+                const sprout = document.getElementById('sprout-img');
+                sprout.style.transform = `scale(${1 + (currentClicks/totalClicks)})`;
+                sprout.style.opacity = `${0.5 + (currentClicks/totalClicks) * 0.5}`;
+
+                // Check Bloom
+                if (currentClicks >= totalClicks) {
+                    bloom();
+                }
+            }
+        }
+
+        function bloom() {
+            // UI Switch
+            document.getElementById('stage-seed').classList.add('hidden');
+            document.getElementById('stage-bloom').classList.remove('hidden');
+            
+            // Set Content
+            document.getElementById('final-flower').src = IMAGES[giftData.flower] || IMAGES['Rose'];
+            document.getElementById('message-text').innerText = giftData.message;
+            
+            // Show Garden Button
+            document.getElementById('nav-btn').classList.remove('hidden');
+
+            // Save to Firestore
+            saveGiftToGarden();
+        }
+
+        function saveGiftToGarden() {
+            if (!auth.currentUser) return;
+            
+            const userId = auth.currentUser.uid;
+            
+            // Add to "garden" collection
+            db.collection('users').doc(userId).collection('garden').add({
+                flower: giftData.flower,
+                message: giftData.message,
+                receivedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                // Random position for canvas
+                x: Math.random(), 
+                y: Math.random() 
+            }).then(() => {
+                console.log("Flower saved to garden!");
+            });
+        }
+
+        // ---------------------------------------------------------
+        // GARDEN VIEW LOGIC
+        // ---------------------------------------------------------
+        function toggleGarden() {
+            const giftContainer = document.getElementById('gift-container');
+            const gardenContainer = document.getElementById('garden-container');
+            const btn = document.getElementById('nav-btn');
+
+            isGardenOpen = !isGardenOpen;
+
+            if (isGardenOpen) {
+                // Show Garden
+                giftContainer.classList.add('hidden');
+                gardenContainer.classList.remove('hidden');
+                document.body.style.backgroundColor = '#2F3515'; // Dark Night/Soil color
+                btn.innerText = "Back to Gift 🎁";
+                drawGarden();
+            } else {
+                // Show Gift
+                gardenContainer.classList.add('hidden');
+                giftContainer.classList.remove('hidden');
+                document.body.style.backgroundColor = THEMES[giftData.theme] || '#fcfcfc';
+                btn.innerText = "View Garden 🪴";
+            }
+        }
+
+        function drawGarden() {
+            const canvas = document.getElementById('garden-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Canvas Size
+            canvas.width = 800;
+            canvas.height = 500;
+
+            // Clear & Draw Dirt Background
+            ctx.fillStyle = "#3e2723"; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Fetch Flowers
+            if (auth.currentUser) {
+                const userId = auth.currentUser.uid;
+                db.collection('users').doc(userId).collection('garden').get().then((querySnapshot) => {
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        const img = new Image();
+                        img.src = IMAGES[data.flower];
+                        
+                        img.onload = () => {
+                            // Calculate position (keep within bounds)
+                            const size = 60;
+                            const x = data.x * (canvas.width - size);
+                            const y = data.y * (canvas.height - size);
+                            ctx.drawImage(img, x, y, size, size);
+                        };
+                    });
+                });
+            }
+        }
+    </script>
+</body>
+</html>
