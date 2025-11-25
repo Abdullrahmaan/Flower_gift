@@ -25,94 +25,114 @@
             transition: background-color 0.2s;
         }
         #copy-button:hover {
-            background-color: #6495ED; /* Cornflower Blue darker hover */
+            background-color: #4A7FD3; /* Slightly darker blue */
+        }
+        /* Style for selected radio item */
+        input[type="radio"]:checked + label {
+            border-color: #7B68EE; /* MediumSlateBlue border */
+            box-shadow: 0 4px 6px -1px rgba(123, 104, 238, 0.2), 0 2px 4px -2px rgba(123, 104, 238, 0.2);
+            background-color: #f0f0ff; /* Very light purple background */
+        }
+        .section-title {
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
         }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-4 sm:p-8">
 
-    <div class="container w-full bg-white shadow-xl rounded-3xl p-6 md:p-10">
+    <div class="container w-full bg-white p-6 sm:p-10 rounded-3xl shadow-2xl border border-gray-100">
+        
+        <!-- HEADER -->
+        <h1 class="text-4xl sm:text-5xl font-extrabold text-[#7B68EE] text-center mb-2">
+            The Digital Gardener 🌻
+        </h1>
+        <p class="text-center text-gray-500 text-lg mb-8">
+            Build a special flower gift that blooms only when watered by the recipient.
+        </p>
 
-        <!-- Header -->
-        <header class="text-center mb-10">
-            <h1 class="text-4xl font-extrabold text-[#7B68EE] sm:text-5xl">
-                Create a Personalized Flower Gift 
-            </h1>
-            <p class="mt-3 text-lg text-gray-500">
-                Craft a special message, choose a theme, and set the perfect number of "waters."
-            </p>
-        </header>
+        <form id="gift-form" class="space-y-8">
 
-        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- SECTION 1: FLOWER TYPE -->
+            <div class="p-6 bg-purple-50 rounded-xl">
+                <h2 class="section-title text-2xl font-bold text-gray-700 flex items-center">
+                    1. Choose Your Flower
+                </h2>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <!-- Rose -->
+                    <input type="radio" id="flower-rose" name="flower" value="Rose" class="hidden" checked>
+                    <label for="flower-rose" class="block text-center p-4 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 hover:shadow-md">
+                        <img src="https://placehold.co/100x100/ff69b4/white?text=Rose" alt="Rose Icon" class="mx-auto mb-2 rounded">
+                        <span class="font-medium text-gray-800">Rose</span>
+                    </label>
+                    <!-- Lily -->
+                    <input type="radio" id="flower-lily" name="flower" value="Lily" class="hidden">
+                    <label for="flower-lily" class="block text-center p-4 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 hover:shadow-md">
+                        <img src="https://placehold.co/100x100/00bfff/white?text=Lily" alt="Lily Icon" class="mx-auto mb-2 rounded">
+                        <span class="font-medium text-gray-800">Lily</span>
+                    </label>
+                    <!-- Tulip -->
+                    <input type="radio" id="flower-tulip" name="flower" value="Tulip" class="hidden">
+                    <label for="flower-tulip" class="block text-center p-4 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 hover:shadow-md">
+                        <img src="https://placehold.co/100x100/ff8c00/white?text=Tulip" alt="Tulip Icon" class="mx-auto mb-2 rounded">
+                        <span class="font-medium text-gray-800">Tulip</span>
+                    </label>
+                    <!-- Daisy -->
+                    <input type="radio" id="flower-daisy" name="flower" value="Daisy" class="hidden">
+                    <label for="flower-daisy" class="block text-center p-4 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 hover:shadow-md">
+                        <img src="https://placehold.co/100x100/ffd700/black?text=Daisy" alt="Daisy Icon" class="mx-auto mb-2 rounded">
+                        <span class="font-medium text-gray-800">Daisy</span>
+                    </label>
+                    <!-- Orchid -->
+                    <input type="radio" id="flower-orchid" name="flower" value="Orchid" class="hidden">
+                    <label for="flower-orchid" class="block text-center p-4 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 hover:shadow-md">
+                        <img src="https://placehold.co/100x100/9932cc/white?text=Orchid" alt="Orchid Icon" class="mx-auto mb-2 rounded">
+                        <span class="font-medium text-gray-800">Orchid</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- SECTION 2: PERSONAL MESSAGE -->
+            <div class="p-6 bg-red-50 rounded-xl">
+                <h2 class="section-title text-2xl font-bold text-gray-700 flex items-center">
+                    2. Write a Personal Message
+                </h2>
+                <textarea id="message" name="message" rows="4" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-[#7B68EE] focus:border-[#7B68EE] transition duration-150" placeholder="Enter your heartfelt message here (e.g., 'Thinking of you! Hope this brightens your day.')." maxlength="300"></textarea>
+                <p class="text-sm text-gray-500 mt-1">Max 300 characters.</p>
+            </div>
             
-            <!-- Section 1: Customization Inputs -->
-            <section class="space-y-6">
-
-                <!-- 1. Message Input -->
-                <div class="p-5 bg-pink-50 rounded-xl shadow-inner">
-                    <label for="message" class="block text-xl font-semibold text-pink-700 mb-2">💌 Your Personalized Message</label>
-                    <textarea id="message" rows="4" class="w-full p-3 border-pink-300 rounded-lg focus:ring-pink-500 focus:border-pink-500" placeholder="Type your heartfelt message here..."></textarea>
-                    <small class="text-pink-600">This message will be revealed when they water the flower!</small>
-                </div>
-
-                <!-- 2. Flower Selection -->
-                <div class="p-5 bg-purple-50 rounded-xl shadow-inner">
-                    <label for="flower-select" class="block text-xl font-semibold text-purple-700 mb-3">🌺 Choose Your Flower</label>
-                    <select id="flower-select" class="w-full p-3 border-purple-300 rounded-lg focus:ring-purple-500 focus:border-purple-500">
-                        <option value="Rose">Rose (Classic)</option>
-                        <option value="Lily">Lily (Elegant)</option>
-                        <option value="Orchid">Orchid (Joyful)</option>
-                    </select>
-                </div>
-
-                <!-- 3. Theme Selection -->
-                <div class="p-5 bg-blue-50 rounded-xl shadow-inner">
-                    <label for="theme-select" class="block text-xl font-semibold text-blue-700 mb-3">🎨 Choose the Theme</label>
-                    <select id="theme-select" class="w-full p-3 border-blue-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <option value="default">Default (Soft Cream)</option>
-                        <option value="warm">Warm (Peach/Orange Tones)</option>
-                        <option value="cool">Cool (Light Blue Tones)</option>
-                        <option value="vibrant">Vibrant (Light Green/Mint Tones)</option>
-                    </select>
-                </div>
-            </section>
-
-            <!-- Section 2: Interaction and Link Output -->
-            <section class="space-y-6">
-
-                <!-- 4. Interaction Clicks -->
-                <div class="p-5 bg-yellow-50 rounded-xl shadow-inner">
-                    <label for="clicks" class="block text-xl font-semibold text-yellow-700 mb-2">💧 Set Watering Clicks (1-10)</label>
-                    <input type="number" id="clicks" min="1" max="10" value="3" class="w-full p-3 border-yellow-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
-                    <small class="text-yellow-600">The number of times they must click the watering can to bloom the flower.</small>
-                </div>
-
-                <!-- 5. Generate Button -->
-                <button id="generate-button" class="w-full py-4 text-white bg-[#7B68EE] hover:bg-[#6A5ACD] font-bold text-xl rounded-lg shadow-lg transform transition duration-150 hover:scale-[1.02]">
-                    ✨ Generate Gift Link
-                </button>
-
-                <!-- 6. Generated Link Output -->
-                <div id="generated-link-container" class="mt-6 p-4 bg-gray-100 rounded-xl border border-dashed border-gray-400 flex flex-col items-center justify-center min-h-[100px]">
-                    <p class="text-gray-600 font-medium mb-3">Your Shareable Link Will Appear Here:</p>
-                    <div id="link-output-area" class="w-full flex flex-col items-center">
-                        <p id="link-text" class="text-sm text-gray-800 text-center select-all break-all hidden mb-3 p-2 bg-white rounded-lg shadow-md"></p>
-                        <button id="copy-button" class="mt-2 px-6 py-2 bg-[#6495ED] text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition duration-150 hidden">
-                            Copy Link to Clipboard
-                        </button>
+            <!-- SECTION 3: THEME AND INTERACTION OPTIONS -->
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- 3A: Theme/Color -->
+                <div class="p-6 bg-blue-50 rounded-xl">
+                    <h2 class="section-title text-xl font-bold text-gray-700 flex items-center">
+                        3A. Choose a Theme
+                    </h2>
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- Default -->
+                        <input type="radio" id="theme-default" name="theme" value="default" class="hidden" checked>
+                        <label for="theme-default" class="block p-3 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 text-center" style="background-color: #f7f3e8;">
+                            <span class="font-medium text-gray-800">Default (Soft Cream)</span>
+                        </label>
+                        <!-- Warm -->
+                        <input type="radio" id="theme-warm" name="theme" value="warm" class="hidden">
+                        <label for="theme-warm" class="block p-3 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 text-center" style="background-color: #ffead6;">
+                            <span class="font-medium text-gray-800">Warm (Peach)</span>
+                        </label>
+                        <!-- Cool -->
+                        <input type="radio" id="theme-cool" name="theme" value="cool" class="hidden">
+                        <label for="theme-cool" class="block p-3 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 text-center" style="background-color: #e5f3ff;">
+                            <span class="font-medium text-gray-800">Cool (Sky Blue)</span>
+                        </label>
+                        <!-- Lavender -->
+                        <input type="radio" id="theme-lavender" name="theme" value="lavender" class="hidden">
+                        <label for="theme-lavender" class="block p-3 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 text-center" style="background-color: #f3e8ff;">
+                            <span class="font-medium text-gray-800">Lavender (Soft)</span>
+                        </label>
                     </div>
                 </div>
 
-                <!-- 7. Help Text -->
-                <p class="text-center text-sm text-gray-400 mt-6">
-                </p>
-            </section>
-        </main>
-    </div>
-
-    <script src="generatelink.js"></script>
-</body>
-</html>
-
-
-
+                <!-- 3B: Click Requirement -->
+                <div class="p-6 bg-green-50 rounded-xl">
+                    <h2 class="
