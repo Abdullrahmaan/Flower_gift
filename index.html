@@ -25,7 +25,7 @@
             transition: background-color 0.2s;
         }
         #copy-button:hover {
-            background-color: #5849b3; /* Darker hover for the generate button's primary color */
+            background-color: #6A5ACD; /* Darker hover for the generate button's primary color */
         }
         /* Custom style for flower buttons to handle hover state visually */
         .flower-button:hover {
@@ -35,57 +35,69 @@
 </head>
 <body class="min-h-screen flex flex-col items-center p-4 sm:p-8">
 
-    <div class="container w-full bg-white p-6 sm:p-10 rounded-3xl shadow-2xl space-y-6">
-        <header class="text-center mb-8">
-            <h1 class="text-4xl font-extrabold text-[#7B68EE]">Build Your Digital Gift</h1>
-            <p class="text-gray-500 mt-2">Create a special flower gift link for someone.</p>
+    <div class="container w-full bg-white p-6 sm:p-10 rounded-3xl shadow-2xl">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-[#7B68EE] mb-2">Build Your Gift</h1>
+            <p class="text-gray-600 text-lg">Customize the surprise before you share the magic!</p>
         </header>
 
-        <!-- 1. Personal Message Input -->
-        <section class="space-y-2">
-            <label for="message" class="block text-lg font-semibold text-gray-700">1. Your Personalized Message</label>
-            <textarea id="message" rows="3" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7B68EE] focus:border-transparent transition" placeholder="Write a sweet message..."></textarea>
-        </section>
-
-        <!-- 2. Flower Selectors (Using a flex container for responsiveness) -->
-        <section class="space-y-4">
-            <label class="block text-lg font-semibold text-gray-700">2. Choose Your Flower</label>
-            <div id="flower-select-container" class="flex flex-wrap justify-center gap-4">
-                <button data-flower="Rose" class="flower-button flex flex-col items-center p-3 border-2 border-[#7B68EE] rounded-xl shadow-md transition duration-150 bg-white hover:bg-indigo-50 active:bg-indigo-100">
-                    <img src="https://placehold.co/80x80/ffe4e1/7B68EE?text=Rose" alt="Rose" class="w-16 h-16 rounded-lg mb-1">
-                    <span class="text-sm font-medium text-gray-700">Rose</span>
-                </button>
-                <button data-flower="Tulip" class="flower-button flex flex-col items-center p-3 border-2 border-gray-200 rounded-xl shadow-md transition duration-150 bg-white hover:bg-gray-50 active:bg-gray-100">
-                    <img src="https://placehold.co/80x80/f7a8b8/7B68EE?text=Tulip" alt="Tulip" class="w-16 h-16 rounded-lg mb-1">
-                    <span class="text-sm font-medium text-gray-700">Tulip</span>
-                </button>
-                <button data-flower="Daisy" class="flower-button flex flex-col items-center p-3 border-2 border-gray-200 rounded-xl shadow-md transition duration-150 bg-white hover:bg-gray-50 active:bg-gray-100">
-                    <img src="https://placehold.co/80x80/ffdd00/7B68EE?text=Daisy" alt="Daisy" class="w-16 h-16 rounded-lg mb-1">
-                    <span class="text-sm font-medium text-gray-700">Daisy</span>
-                </button>
+        <!-- 1. Flower Selection -->
+        <section class="mb-8">
+            <h2 class="text-xl font-semibold text-gray-700 mb-3 flex items-center">
+                <span role="img" aria-label="Flower">🌸</span> 1. Choose a Flower
+            </h2>
+            <div class="flex flex-wrap justify-center gap-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
+                <button class="flower-button px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition duration-150 border-2 border-transparent hover:border-purple-400" data-flower="Rose">🌹 Rose</button>
+                <button class="flower-button px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition duration-150 border-2 border-transparent hover:border-purple-400" data-flower="Tulip">🌷 Tulip</button>
+                <button class="flower-button px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition duration-150 border-2 border-transparent hover:border-purple-400" data-flower="Sunflower">🌻 Sunflower</button>
+                <button class="flower-button px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition duration-150 border-2 border-transparent hover:border-purple-400" data-flower="Daisy">🌼 Daisy</button>
+                <button class="flower-button px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition duration-150 border-2 border-transparent hover:border-purple-400" data-flower="Orchid"> Orchis</button>
+                <button class="flower-button px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition duration-150 border-2 border-transparent hover:border-purple-400" data-flower="Carnation"> Carnation</button>
+                <button class="flower-button px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition duration-150 border-2 border-transparent hover:border-purple-400" data-flower="Poppy"> Poppy</button>
+                <input type="hidden" id="flower-select" value="Rose">
             </div>
-            <input type="hidden" id="flower-select" value="Rose"> <!-- Hidden input to hold selected flower -->
+            <p class="text-center text-sm text-gray-500 mt-2">Selected Flower: <span id="selected-flower-text" class="font-bold text-[#7B68EE]">🌹 Rose</span></p>
         </section>
 
-        <!-- 3. Theme Selector (Hidden for simplification, using a default value) -->
-        <input type="hidden" id="theme-select" value="Forest">
+        <!-- 2. Personalized Message -->
+        <section class="mb-8">
+            <h2 class="text-xl font-semibold text-gray-700 mb-3 flex items-center">
+                <span role="img" aria-label="Message">✉️</span> 2. Write Your Message
+            </h2>
+            <textarea id="message" rows="4" class="w-full p-4 border-2 border-gray-300 rounded-xl focus:border-[#7B68EE] focus:ring focus:ring-[#7B68EE] focus:ring-opacity-50 transition duration-150" placeholder="Type your heartfelt message here..."></textarea>
+        </section>
 
-        <!-- 4. Interaction Settings -->
-        <section class="space-y-2">
-            <label for="clicks" class="block text-lg font-semibold text-gray-700">3. Watering Clicks Needed</label>
-            <div class="flex items-center space-x-3">
-                <input type="number" id="clicks" value="5" min="1" max="10" class="w-20 p-3 border-2 border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-[#7B68EE] focus:border-transparent transition">
-                <p class="text-gray-500 text-sm">The number of times the receiver needs to click to make the flower bloom (1-10).</p>
+        <!-- 3. Theme Selection (Music/Vibes) -->
+        <section class="mb-8">
+            <h2 class="text-xl font-semibold text-gray-700 mb-3 flex items-center">
+                <span role="img" aria-label="Sparkles">✨</span> 3. Experience Details
+            </h2>
+            <div class="flex flex-col sm:flex-row gap-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                <!-- Theme/Music Selection -->
+                <div class="flex-1">
+                    <label for="theme-select" class="block text-sm font-medium text-gray-700 mb-1">Background Theme:</label>
+                    <select id="theme-select" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50">
+                        <option value="light">Light & Cheerful</option>
+                        <option value="dark">Dark & Cozy</option>
+                        <option value="forest">Deep Forest</option>
+                    </select>
+                </div>
+                <!-- Clicks Required -->
+                <div class="flex-1">
+                    <label for="clicks" class="block text-sm font-medium text-gray-700 mb-1">Watering Clicks (1-10):</label>
+                    <input type="number" id="clicks" min="1" max="10" value="3" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 text-center" placeholder="3">
+                </div>
             </div>
+            <p class="text-center text-sm text-gray-500 mt-2">This is how many times they need to click the can before the flower blooms.</p>
         </section>
 
 
-        <!-- 5. Generate Button -->
+        <!-- 4. Generate Button -->
         <button id="generate-button" class="w-full py-4 text-white bg-[#7B68EE] hover:bg-[#6A5ACD] font-bold text-xl rounded-lg shadow-lg transform transition duration-150 hover:scale-[1.02]">
             <span role="img" aria-label="Gift Box">🎁</span> Generate Gift Link
         </button>
 
-        <!-- 6. Generated Link Output -->
+        <!-- 5. Generated Link Output -->
         <div id="generated-link-container" class="mt-6 p-4 bg-gray-100 rounded-xl border border-dashed border-gray-400 flex flex-col items-center justify-center min-h-[100px]">
             <p class="text-gray-600 font-medium mb-3">Your Shareable Link Will Appear Here:</p>
             <div id="link-output-area" class="w-full flex flex-col items-center">
@@ -96,15 +108,14 @@
             </div>
         </div>
 
-        <!-- 7. Help Text -->
-        <p class="text-center text-sm text-gray-400 mt-6">
-            **Note**: This is the flower *creation* page. The link you generate will point to the *gift* page.
+        <!-- 6. Help Text -->
+        <p class="text-center text-sm text-gray-500 mt-6">
+            <span role="img" aria-label="Info">ℹ️</span> The generated link will take the recipient to the `gift.html` page with your customizations.
         </p>
 
     </div>
 
-    <!-- JAVASCRIPT LOGIC -->
-    <script type="module" src="script (1).js"></script>
-
+    <!-- Load the link generation script -->
+    <script src="generatelink.js"></script>
 </body>
 </html>
