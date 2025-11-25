@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌸 Create Your Personalized Flower Gift</title>
+    <title>💌 Create Your Personalized Flower Gift</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
@@ -25,114 +25,71 @@
             transition: background-color 0.2s;
         }
         #copy-button:hover {
-            background-color: #4A7FD3; /* Slightly darker blue */
+            background-color: #6A5ACD; /* Darker hover for the generate button's primary color */
         }
-        /* Style for selected radio item */
-        input[type="radio"]:checked + label {
-            border-color: #7B68EE; /* MediumSlateBlue border */
-            box-shadow: 0 4px 6px -1px rgba(123, 104, 238, 0.2), 0 2px 4px -2px rgba(123, 104, 238, 0.2);
-            background-color: #f0f0ff; /* Very light purple background */
-        }
-        .section-title {
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 1rem;
-            margin-bottom: 1.5rem;
+        /* Custom style for flower buttons to handle hover state visually */
+        .flower-button:hover {
+            transform: scale(1.05);
         }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-4 sm:p-8">
 
-    <div class="container w-full bg-white p-6 sm:p-10 rounded-3xl shadow-2xl border border-gray-100">
-        
-        <!-- HEADER -->
-        <h1 class="text-4xl sm:text-5xl font-extrabold text-[#7B68EE] text-center mb-2">
-            The Digital Gardener 🌻
-        </h1>
-        <p class="text-center text-gray-500 text-lg mb-8">
-            Build a special flower gift that blooms only when watered by the recipient.
-        </p>
+    <div class="container w-full bg-white p-6 sm:p-10 rounded-3xl shadow-2xl space-y-8">
+        <h1 class="text-3xl font-extrabold text-[#7B68EE] text-center">Design Your Flower Gift</h1>
+        <p class="text-center text-gray-500">Create a personalized digital flower and message to share with someone special.</p>
 
-        <form id="gift-form" class="space-y-8">
+        <!-- 1. Recipient Name Input -->
+        <div>
+            <label for="recipient-name" class="block text-xl font-semibold text-gray-700 mb-2">1. Recipient's Name</label>
+            <input type="text" id="recipient-name" class="w-full p-3 border border-gray-300 rounded-lg shadow-inner focus:outline-none focus:ring-2 focus:ring-[#7B68EE]" placeholder="e.g., Jane Doe" maxlength="50">
+        </div>
 
-            <!-- SECTION 1: FLOWER TYPE -->
-            <div class="p-6 bg-purple-50 rounded-xl">
-                <h2 class="section-title text-2xl font-bold text-gray-700 flex items-center">
-                    1. Choose Your Flower
-                </h2>
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    <!-- Rose -->
-                    <input type="radio" id="flower-rose" name="flower" value="Rose" class="hidden" checked>
-                    <label for="flower-rose" class="block text-center p-4 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 hover:shadow-md">
-                        <img src="https://placehold.co/100x100/ff69b4/white?text=Rose" alt="Rose Icon" class="mx-auto mb-2 rounded">
-                        <span class="font-medium text-gray-800">Rose</span>
-                    </label>
-                    <!-- Lily -->
-                    <input type="radio" id="flower-lily" name="flower" value="Lily" class="hidden">
-                    <label for="flower-lily" class="block text-center p-4 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 hover:shadow-md">
-                        <img src="https://placehold.co/100x100/00bfff/white?text=Lily" alt="Lily Icon" class="mx-auto mb-2 rounded">
-                        <span class="font-medium text-gray-800">Lily</span>
-                    </label>
-                    <!-- Tulip -->
-                    <input type="radio" id="flower-tulip" name="flower" value="Tulip" class="hidden">
-                    <label for="flower-tulip" class="block text-center p-4 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 hover:shadow-md">
-                        <img src="https://placehold.co/100x100/ff8c00/white?text=Tulip" alt="Tulip Icon" class="mx-auto mb-2 rounded">
-                        <span class="font-medium text-gray-800">Tulip</span>
-                    </label>
-                    <!-- Daisy -->
-                    <input type="radio" id="flower-daisy" name="flower" value="Daisy" class="hidden">
-                    <label for="flower-daisy" class="block text-center p-4 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 hover:shadow-md">
-                        <img src="https://placehold.co/100x100/ffd700/black?text=Daisy" alt="Daisy Icon" class="mx-auto mb-2 rounded">
-                        <span class="font-medium text-gray-800">Daisy</span>
-                    </label>
-                    <!-- Orchid -->
-                    <input type="radio" id="flower-orchid" name="flower" value="Orchid" class="hidden">
-                    <label for="flower-orchid" class="block text-center p-4 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 hover:shadow-md">
-                        <img src="https://placehold.co/100x100/9932cc/white?text=Orchid" alt="Orchid Icon" class="mx-auto mb-2 rounded">
-                        <span class="font-medium text-gray-800">Orchid</span>
-                    </label>
-                </div>
+        <!-- 2. Personal Message Input -->
+        <div>
+            <label for="personal-message" class="block text-xl font-semibold text-gray-700 mb-2">2. Your Message</label>
+            <textarea id="personal-message" class="w-full p-3 border border-gray-300 rounded-lg shadow-inner focus:outline-none focus:ring-2 focus:ring-[#7B68EE] resize-y min-h-[150px]" placeholder="Write your heartfelt message here. It will be revealed when the flower blooms!" maxlength="500"></textarea>
+            <p class="text-xs text-right text-gray-400 mt-1"><span id="message-char-count">0</span>/500 characters</p>
+        </div>
+
+        <!-- 3. Watering Clicks Input -->
+        <div>
+            <label for="watering-clicks" class="block text-xl font-semibold text-gray-700 mb-2">3. Clicks to Bloom</label>
+            <input type="number" id="watering-clicks" class="w-full p-3 border border-gray-300 rounded-lg shadow-inner focus:outline-none focus:ring-2 focus:ring-[#7B68EE]" value="10" min="5" max="100">
+            <p class="text-sm text-gray-500 mt-1">How many times should the recipient click the watering can? (5 - 100)</p>
+        </div>
+
+        <!-- 4. Flower Type Selector -->
+        <div class="mt-8">
+            <label class="block text-xl font-semibold text-gray-700 mb-3">4. Choose Your Flower Type</label>
+            <div id="flower-selector" class="flex flex-wrap justify-center gap-4 p-4 bg-gray-50 rounded-xl shadow-inner border border-gray-200 min-h-[100px] items-center">
+                <!-- Flower images will be inserted here by JavaScript -->
+                <p class="text-gray-500 italic" id="flower-selector-placeholder">Loading flower types...</p> 
             </div>
+        </div>
 
-            <!-- SECTION 2: PERSONAL MESSAGE -->
-            <div class="p-6 bg-red-50 rounded-xl">
-                <h2 class="section-title text-2xl font-bold text-gray-700 flex items-center">
-                    2. Write a Personal Message
-                </h2>
-                <textarea id="message" name="message" rows="4" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-[#7B68EE] focus:border-[#7B68EE] transition duration-150" placeholder="Enter your heartfelt message here (e.g., 'Thinking of you! Hope this brightens your day.')." maxlength="300"></textarea>
-                <p class="text-sm text-gray-500 mt-1">Max 300 characters.</p>
+        <!-- 5. Generate Button -->
+        <button id="generate-button" class="w-full py-4 text-white bg-[#7B68EE] hover:bg-[#6A5ACD] font-bold text-xl rounded-lg shadow-lg transform transition duration-150 hover:scale-[1.02]">
+            <span role="img" aria-label="Gift Box">🎁</span> Generate Gift Link
+        </button>
+
+        <!-- 6. Generated Link Output -->
+        <div id="generated-link-container" class="mt-6 p-4 bg-gray-100 rounded-xl border border-dashed border-gray-400 flex flex-col items-center justify-center min-h-[100px]">
+            <p class="text-gray-600 font-medium mb-3">Your Shareable Link Will Appear Here:</p>
+            <div id="link-output-area" class="w-full flex flex-col items-center">
+                <p id="link-text" class="text-sm text-gray-800 text-center select-all break-all hidden mb-3 p-2 bg-white rounded-lg shadow-md"></p>
+                <button id="copy-button" class="mt-2 px-6 py-2 bg-[#6495ED] text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition duration-150 hidden">
+                    Copy Link to Clipboard
+                </button>
             </div>
-            
-            <!-- SECTION 3: THEME AND INTERACTION OPTIONS -->
-            <div class="grid md:grid-cols-2 gap-8">
-                <!-- 3A: Theme/Color -->
-                <div class="p-6 bg-blue-50 rounded-xl">
-                    <h2 class="section-title text-xl font-bold text-gray-700 flex items-center">
-                        3A. Choose a Theme
-                    </h2>
-                    <div class="grid grid-cols-2 gap-3">
-                        <!-- Default -->
-                        <input type="radio" id="theme-default" name="theme" value="default" class="hidden" checked>
-                        <label for="theme-default" class="block p-3 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 text-center" style="background-color: #f7f3e8;">
-                            <span class="font-medium text-gray-800">Default (Soft Cream)</span>
-                        </label>
-                        <!-- Warm -->
-                        <input type="radio" id="theme-warm" name="theme" value="warm" class="hidden">
-                        <label for="theme-warm" class="block p-3 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 text-center" style="background-color: #ffead6;">
-                            <span class="font-medium text-gray-800">Warm (Peach)</span>
-                        </label>
-                        <!-- Cool -->
-                        <input type="radio" id="theme-cool" name="theme" value="cool" class="hidden">
-                        <label for="theme-cool" class="block p-3 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 text-center" style="background-color: #e5f3ff;">
-                            <span class="font-medium text-gray-800">Cool (Sky Blue)</span>
-                        </label>
-                        <!-- Lavender -->
-                        <input type="radio" id="theme-lavender" name="theme" value="lavender" class="hidden">
-                        <label for="theme-lavender" class="block p-3 border-2 border-gray-300 rounded-xl cursor-pointer transition duration-150 text-center" style="background-color: #f3e8ff;">
-                            <span class="font-medium text-gray-800">Lavender (Soft)</span>
-                        </label>
-                    </div>
-                </div>
+        </div>
 
-                <!-- 3B: Click Requirement -->
-                <div class="p-6 bg-green-50 rounded-xl">
-                    <h2 class="
+        <!-- 7. Help Text -->
+        <p class="text-center text-sm text-gray-400 mt-4">Note: This page only creates the gift. The recipient will view it on the main 'Gift.HTML' page.</p>
+
+    </div>
+    
+    <!-- Link the JavaScript file, ensuring it's loaded after all HTML elements -->
+    <script src="script.js"></script> 
+</body>
+</html>
