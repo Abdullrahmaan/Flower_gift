@@ -35,45 +35,55 @@
 </head>
 <body class="min-h-screen flex flex-col items-center p-4 sm:p-8">
 
-    <div class="container w-full bg-white p-6 sm:p-10 rounded-3xl shadow-2xl space-y-8">
-        <h1 class="text-3xl font-extrabold text-[#7B68EE] text-center">Design Your Flower Gift</h1>
-        <p class="text-center text-gray-500">Create a personalized digital flower and message to share with someone special.</p>
+    <div class="container w-full bg-white p-6 sm:p-10 rounded-3xl shadow-2xl space-y-8 mt-4 mb-10">
+        
+        <!-- Header -->
+        <header class="text-center">
+            <h1 class="text-4xl font-extrabold text-[#7B68EE] mb-2">Build Your Digital Bouquet</h1>
+            <p class="text-gray-500 text-lg">Select a flower, write a message, and send a growing gift.</p>
+        </header>
 
-        <!-- 1. Recipient Name Input -->
-        <div>
-            <label for="recipient-name" class="block text-xl font-semibold text-gray-700 mb-2">1. Recipient's Name</label>
-            <input type="text" id="recipient-name" class="w-full p-3 border border-gray-300 rounded-lg shadow-inner focus:outline-none focus:ring-2 focus:ring-[#7B68EE]" placeholder="e.g., Jane Doe" maxlength="50">
-        </div>
-
-        <!-- 2. Personal Message Input -->
-        <div>
-            <label for="personal-message" class="block text-xl font-semibold text-gray-700 mb-2">2. Your Message</label>
-            <textarea id="personal-message" class="w-full p-3 border border-gray-300 rounded-lg shadow-inner focus:outline-none focus:ring-2 focus:ring-[#7B68EE] resize-y min-h-[150px]" placeholder="Write your heartfelt message here. It will be revealed when the flower blooms!" maxlength="500"></textarea>
-            <p class="text-xs text-right text-gray-400 mt-1"><span id="message-char-count">0</span>/500 characters</p>
-        </div>
-
-        <!-- 3. Watering Clicks Input -->
-        <div>
-            <label for="watering-clicks" class="block text-xl font-semibold text-gray-700 mb-2">3. Clicks to Bloom</label>
-            <input type="number" id="watering-clicks" class="w-full p-3 border border-gray-300 rounded-lg shadow-inner focus:outline-none focus:ring-2 focus:ring-[#7B68EE]" value="10" min="5" max="100">
-            <p class="text-sm text-gray-500 mt-1">How many times should the recipient click the watering can? (5 - 100)</p>
-        </div>
-
-        <!-- 4. Flower Type Selector -->
-        <div class="mt-8">
-            <label class="block text-xl font-semibold text-gray-700 mb-3">4. Choose Your Flower Type</label>
-            <div id="flower-selector" class="flex flex-wrap justify-center gap-4 p-4 bg-gray-50 rounded-xl shadow-inner border border-gray-200 min-h-[100px] items-center">
-                <!-- Flower images will be inserted here by JavaScript -->
-                <p class="text-gray-500 italic" id="flower-selector-placeholder">Loading flower types...</p> 
+        <!-- 1. Flower Selection Grid -->
+        <section>
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4 border-b pb-2">1. Choose Your Flower</h2>
+            <div id="flower-selection-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                
+                <!-- Flower Button Template (Dynamically populated by script.js) -->
+                <!-- <button class="flower-button" data-flower="Rose">...</button> -->
+            
             </div>
-        </div>
+            <p id="flower-error" class="text-red-500 text-sm mt-2 hidden">Please select a flower.</p>
+        </section>
 
-        <!-- 5. Generate Button -->
+        <!-- 2. Personalized Message -->
+        <section>
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4 border-b pb-2">2. Write Your Message</h2>
+            <textarea id="personal-message" placeholder="Type your heartfelt message here (max 250 characters)..." 
+                      maxlength="250" 
+                      class="w-full p-4 h-32 border-2 border-gray-300 rounded-xl focus:border-[#7B68EE] focus:ring-1 focus:ring-[#7B68EE] transition duration-150 resize-none text-gray-700"></textarea>
+            <div class="flex justify-between text-sm text-gray-500 mt-2">
+                <p>A little bit of kindness goes a long way!</p>
+                <p><span id="char-count">0</span> / 250</p>
+            </div>
+        </section>
+        
+        <!-- Preview Section -->
+        <section>
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4 border-b pb-2">3. Gift Preview</h2>
+            <div id="preview-card" class="bg-gradient-to-br from-yellow-100 to-pink-100 p-6 rounded-2xl shadow-xl flex flex-col items-center space-y-4 border-4 border-dashed border-gray-300">
+                <h3 class="text-xl font-bold text-gray-800">Your Gift</h3>
+                <img id="preview-image" src="https://placehold.co/100x100/A0C4FF/ffffff?text=Select" alt="Flower Preview" class="w-24 h-24 rounded-full border-4 border-white shadow-md transition-all duration-300">
+                <p id="preview-message" class="italic text-gray-600 text-center max-h-24 overflow-hidden">Your message will appear here after the flower blooms.</p>
+            </div>
+        </section>
+
+
+        <!-- 4. Generate Button -->
         <button id="generate-button" class="w-full py-4 text-white bg-[#7B68EE] hover:bg-[#6A5ACD] font-bold text-xl rounded-lg shadow-lg transform transition duration-150 hover:scale-[1.02]">
             <span role="img" aria-label="Gift Box">🎁</span> Generate Gift Link
         </button>
 
-        <!-- 6. Generated Link Output -->
+        <!-- 5. Generated Link Output -->
         <div id="generated-link-container" class="mt-6 p-4 bg-gray-100 rounded-xl border border-dashed border-gray-400 flex flex-col items-center justify-center min-h-[100px]">
             <p class="text-gray-600 font-medium mb-3">Your Shareable Link Will Appear Here:</p>
             <div id="link-output-area" class="w-full flex flex-col items-center">
@@ -84,12 +94,12 @@
             </div>
         </div>
 
-        <!-- 7. Help Text -->
-        <p class="text-center text-sm text-gray-400 mt-4">Note: This page only creates the gift. The recipient will view it on the main 'Gift.HTML' page.</p>
+        <!-- 6. Help Text -->
+        <p class="text-center text-sm text-gray-400 mt-4">This gift is saved securely and can only be opened once.</p>
 
     </div>
-    
-    <!-- Link the JavaScript file, ensuring it's loaded after all HTML elements -->
-    <script src="script.js"></script> 
+
+    <!-- Link to the core JavaScript file -->
+    <script src="script.js"></script>
 </body>
 </html>
