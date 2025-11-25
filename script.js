@@ -1,42 +1,92 @@
+// =========================================================================
+// SECTION 1: CONFIGURATION & GLOBAL SETUP
+// =========================================================================
+
 // Global Firebase variables provided by the environment
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const appId = 'github-pages-flower-gift-app'; // Fixed identifier for the app
 
-// Check if __firebase_config exists and is a non-empty string before parsing
-let firebaseConfig = {};
-if (typeof __firebase_config !== 'undefined' && __firebase_config.trim() !== '') {
-    try {
-        firebaseConfig = JSON.parse(__firebase_config);
-    } catch (e) {
-        console.error("Failed to parse __firebase_config:", e);
-    }
-} else {
-    // === FIX FOR LOCAL SERVER RUNNING ===
-    console.warn("Using placeholder Firebase configuration for local development.");
-    firebaseConfig = {
-        apiKey: "AIzaSy_LOCAL_DEV_KEY",
-        authDomain: "local-dev-app.firebaseapp.com",
-        projectId: "local-dev-project", // CRITICAL: This was missing in local runs
-        storageBucket: "local-dev-app.appspot.com",
-        messagingSenderId: "1234567890",
-        appId: "1:1234567890:web:localdev"
-    };
-    
-}
+/**
+ * CRITICAL STEP: Paste your actual Firebase configuration here.
+ * This is only a placeholder/fallback for local development.
+ * Saving will fail if these placeholder values are not replaced.
+ */
+let firebaseConfig = {
+    apiKey: "YOUR_API_KEY", // <-- REPLACE THIS WITH YOUR ACTUAL API KEY
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
 
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+const initialAuthToken = null; // Assuming GitHub Pages deployment
 
-// Initialize Firebase App and Services using the global 'firebase' object (Compat API)
+// Initialize Firebase App and Services (using the Compat SDK loaded in gift.html)
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
-firebase.firestore.setLogLevel('debug'); // Enable Firestore logging for better debugging
+firebase.firestore.setLogLevel('debug');
 
-// Global state variables
+// Global State
 let userId = null;
 let isAuthReady = false;
+let flowerCollection = []; // Stores all flowers loaded from the user's garden
+let currentView = 'flower'; // Tracks whether 'flower' or 'garden' is active
 
-// --- Utility Functions ---
+// Garden Constants
+const PIXEL_SIZE = 40; // Size of the grid cell (e.g., 40x40px)
+const GARDEN_WIDTH_CELLS = 20;
+const GARDEN_HEIGHT_CELLS = 10;
+const FLOWER_TYPES = ['Rose', 'Lily', 'Tulip', 'Daisy', 'Orchid']; // Must match asset filenames
 
+// DOM/Canvas Elements
+const canvas = document.getElementById('garden-canvas');
+const ctx = canvas ? canvas.getContext('2d') : null;
+
+// =========================================================================
+// SECTION 2: ASSET PRELOADING (Images)
+// =========================================================================
+
+const flowerImages = {};
+const gardenBackgroundImg = new Image();
+gardenBackgroundImg.src = 'garden_background.png';
+
+let assetsLoaded = 0;
+const totalAssets = FLOWER_TYPES.length + 1; // +1 for the background image
+
+const checkAssets = () => {
+    assetsLoaded++;
+    if (assetsLoaded === totalAssets) {
+        // Once all images are loaded, if we have data, redraw the garden
+        if (flowerCollection.length > 0) {
+             drawGarden(flowerCollection);
+        }
+    }
+};
+
+// Load images and use a promise-like counter to know when they are all ready
+[gardenBackgroundImg, ...FLOWER_TYPES.map(name => flowerImages[name] = new Image())].forEach((img, index) => {
+    const name = index === 0 ? 'garden_background' : FLOWER_TYPES[index - 1];
+    img.src = index === 0 ? 'garden_background.png' : `${name}.png`;
+
+    if (img.complete) {
+        checkAssets();
+    } else {
+        img.onload = checkAssets;
+        img.onerror = () => {
+            console.error(`Failed to load image: ${name}.png`);
+            checkAssets(); // Count as loaded even if failed
+        }
+    }
+});
+
+// =========================================================================
+// SECTION 3: UTILITY FUNCTIONS
+// =========================================================================
+
+/**
+ * Converts a Firestore Timestamp object to a readable date string.
+ */
 function formatTimestamp(timestamp) {
     if (timestamp && typeof timestamp.toDate === 'function') {
         return timestamp.toDate().toLocaleDateString();
@@ -45,31 +95,126 @@ function formatTimestamp(timestamp) {
 }
 
 /**
+ * Creates and animates a single sparkle element.
+ * (This completes the implementation referenced in the gift reveal logic)
+ */
+function createSparkle() {
+    const sparkleOverlay = document.getElementById('sparkle-overlay');
+    if (!sparkleOverlay) return;
+
+    const sparkle = document.createElement('div');
+    sparkle.className = 'sparkle';
+    
+    // Random position within the flower area
+    const flowerRect = document.getElementById('main-flower').getBoundingClientRect();
+    const x = flowerRect.left + Math.random() * flowerRect.width;
+    const y = flowerRect.top + flowerRect.height * 0.2; // Start above the base
+    
+    sparkle.style.left = `${x}px`;
+    sparkle.style.top = `${y}px`;
+    sparkle.style.opacity = '1';
+    sparkle.style.animationDuration = `${1.5 + Math.random() * 1.5}s`; // 1.5s to 3s
+    sparkle.style.backgroundColor = `hsl(${Math.random() * 60 + 240}, 100%, 80%)`; // Blue/Pink hue
+    sparkle.style.transform = `translateY(${-(50 + Math.random() * 50)}px)`;
+
+    sparkleOverlay.appendChild(sparkle);
+
+    // Remove the sparkle after its animation is done
+    setTimeout(() => {
+        sparkle.remove();
+    }, 3000); 
+}
+
+/**
+ * Continuously generates sparkles for the blooming effect.
+ */
+function startSparkling() {
+    // Only run if sparkle is enabled
+    if (urlParams.get('sparkle') === 'true') {
+        createSparkle();
+        // Generate a new sparkle every 100-300ms
+        setTimeout(startSparkling, 100 + Math.random() * 200); 
+    }
+}
+
+// =========================================================================
+// SECTION 4: FIREBASE & DATA MANAGEMENT
+// =========================================================================
+
+/**
+ * Attempts to sign in the user anonymously if they aren't already signed in.
+ * This assigns a unique, permanent userId for the garden collection.
+ */
+const attemptSignIn = () => {
+    if (firebaseConfig.projectId === "YOUR_PROJECT_ID") {
+         userId = crypto.randomUUID();
+         isAuthReady = true;
+         console.warn("Saving DISABLED: Please configure Firebase with your keys.");
+         return;
+    }
+    // Sign in anonymously if no user is found
+    auth.signInAnonymously().catch(e => console.error("Anonymous sign-in failed:", e));
+};
+
+/**
+ * Listens for authentication state changes to get the user ID.
+ * This is the FIRST function called after DOMContentLoaded.
+ */
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        userId = user.uid;
+        isAuthReady = true;
+        console.log("Firebase Auth Ready. User ID:", userId);
+        
+        // If the flower was already bloomed before auth completed, save it now.
+        const flowerWasRevealed = document.getElementById('gift-reveal').style.opacity === '1';
+        if (flowerWasRevealed) {
+             const flowerData = { /* data is already captured in main logic */ };
+             saveFlowerToGarden(flowerData);
+        }
+        
+        // Start loading the garden data immediately after authentication
+        loadGarden();
+    } else {
+         console.log("Firebase Auth State Changed: No user logged in. Attempting sign-in...");
+         attemptSignIn(); 
+    }
+});
+
+/**
  * Saves the bloomed flower data to the user's private collection in Firestore.
-*/
+ */
 async function saveFlowerToGarden(flowerData) {
-    if (!userId) {
-        console.error("Cannot save: User not authenticated.");
+    if (!userId || firebaseConfig.projectId === "YOUR_PROJECT_ID") {
+        console.error("Cannot save: User not authenticated or config missing.");
         return;
     }
     
-    if (firebaseConfig.projectId === "local-dev-project") {
-        console.warn("Attempting to save data with a placeholder configuration. This will likely fail without proper setup.");
-    }
+    // Find a random, unique grid position (x, y) for the new flower
+    let x, y, attempts = 0, positionTaken;
+    do {
+        x = Math.floor(Math.random() * GARDEN_WIDTH_CELLS);
+        y = Math.floor(Math.random() * GARDEN_HEIGHT_CELLS);
+        positionTaken = flowerCollection.some(flower => flower.gridX === x && flower.gridY === y);
+        attempts++;
+        if (attempts > GARDEN_WIDTH_CELLS * GARDEN_HEIGHT_CELLS * 2) {
+             console.warn("Garden is full! Could not find an empty spot.");
+             return; 
+        }
+    } while (positionTaken);
+    
+    flowerData.gridX = x;
+    flowerData.gridY = y;
     
     try {
-        // Saves data to the user's private collection using Compat syntax
         const collectionRef = db.collection(`artifacts/${appId}/users/${userId}/flowers`);
         
-        // Add doc automatically generates an ID and includes the server timestamp
         const docRef = await collectionRef.add({ 
             ...flowerData,
-            // Uyumluluk (Compat) Server Timestamp kullanımı
             timestamp: firebase.firestore.FieldValue.serverTimestamp() 
         });
         
-        // Update the document to include its own ID (optional but good practice)
-        await docRef.update({ id: docRef.id });
+        await docRef.update({ id: docRef.id }); // Add the document ID to the document itself
 
         console.log("Flower saved to garden with ID:", docRef.id);
     } catch (e) {
@@ -77,320 +222,274 @@ async function saveFlowerToGarden(flowerData) {
     }
 }
 
-
-function startSparkling() {
-    const overlay = document.getElementById('sparkle-overlay');
-    if (overlay.classList.contains('hidden')) {
-        return;
-    }
-    
-    // Generate a few sparkles
-    for (let i = 0; i < 15; i++) {
-        const sparkle = document.createElement('div');
-        sparkle.className = 'sparkle';
-        // Random position within the container bounds
-        sparkle.style.left = `${Math.random() * 100}%`;
-        sparkle.style.top = `${Math.random() * 100}%`;
-        // Randomize animation delay
-        sparkle.style.animationDelay = `${Math.random() * 2}s`;
-        overlay.appendChild(sparkle);
-    }
-}
-
-
-function renderGarden(flowers) {
-    const grid = document.getElementById('flower-grid');
-    grid.innerHTML = ''; 
-
-    if (flowers.length === 0) {
-        grid.innerHTML = '<p style="text-align: center; padding: 20px;">Your garden is empty! Water a flower to start collecting.</p>';
-        return;
-    }
-
-    // Sort flowers by timestamp (newest first). Since orderBy is restricted, we sort client-side.
-    flowers.sort((a, b) => {
-        const timeA = a.timestamp && a.timestamp.toDate ? a.timestamp.toDate().getTime() : 0;
-        const timeB = b.timestamp && b.timestamp.toDate ? b.timestamp.toDate().getTime() : 0;
-        return timeB - timeA;
-    });
-
-    flowers.forEach(flower => {
-        const card = document.createElement('div');
-        card.className = 'flower-card';
-        card.style.backgroundColor = flower.themeColor || '#ffffff';
-        
-        // Truncate message for preview
-        const messagePreview = flower.message.length > 50 
-            ? flower.message.substring(0, 47) + '...' 
-            : flower.message;
-
-        card.innerHTML = `
-            <img src="${flower.flowerName}.png" alt="${flower.flowerName}">
-            <strong>${flower.flowerName} Gift</strong>
-            <p class="date">${formatTimestamp(flower.timestamp)}</p>
-            <div class="message-preview">${messagePreview}</div>
-        `;
-        grid.appendChild(card);
-    });
-}
-
 /**
  * Loads the garden data using a real-time listener (onSnapshot).
  */
 function loadGarden() {
-    // Only proceed if authenticated and ready
     if (!isAuthReady || !userId) return;
 
-    // Use compat syntax for collection reference
     const flowerCollectionRef = db.collection(`artifacts/${appId}/users/${userId}/flowers`);
 
-    // Set up real-time listener to automatically update the garden
+    // Real-time listener: updates 'flowerCollection' and re-draws the canvas on every change
     flowerCollectionRef.onSnapshot((snapshot) => {
         const flowers = [];
         snapshot.forEach((doc) => {
             flowers.push(doc.data());
         });
-        renderGarden(flowers);
+        
+        flowerCollection = flowers; 
+        
+        // Only attempt to draw if assets are loaded
+        if (assetsLoaded === totalAssets) {
+             drawGarden(flowerCollection);
+        } else {
+             console.log("Assets still loading. Will draw garden upon completion.");
+        }
+        
     }, (error) => {
         console.error("Error listening to garden data: ", error);
-        // Display a user-friendly error if running locally
-        if (firebaseConfig.projectId === "local-dev-project") {
-             document.getElementById('flower-grid').innerHTML = '<p style="text-align: center; padding: 20px; color: orange;">Garden loading failed (expected in local dev environment). Data saving/loading is disabled outside the live Canvas environment.</p>';
-        } else {
-             document.getElementById('flower-grid').innerHTML = '<p style="text-align: center; padding: 20px; color: red;">Failed to load garden data.</p>';
-        }
+        document.getElementById('pixel-garden-container').innerHTML = '<p style="text-align: center; padding: 20px; color: white;">Failed to load garden data. Check Firebase configuration.</p>';
     });
 }
 
-// --- View Switching Logic ---
+
+// =========================================================================
+// SECTION 5: CANVAS & GARDEN RENDERING
+// =========================================================================
+
+/**
+ * Draws the pixel art garden grid and plots the flowers.
+ */
+function drawGarden(flowers) {
+    if (!ctx) return;
+
+    canvas.width = GARDEN_WIDTH_CELLS * PIXEL_SIZE;
+    canvas.height = GARDEN_HEIGHT_CELLS * PIXEL_SIZE;
+
+    // 1. Draw the Background Pattern
+    if (gardenBackgroundImg.complete) {
+        const pattern = ctx.createPattern(gardenBackgroundImg, 'repeat');
+        ctx.fillStyle = pattern;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else {
+        ctx.fillStyle = '#654321'; // Fallback soil color
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    
+    // 2. Plot the Flowers
+    flowers.forEach(flower => {
+        const x = flower.gridX * PIXEL_SIZE;
+        const y = flower.gridY * PIXEL_SIZE;
+        const img = flowerImages[flower.flowerName];
+
+        if (img && img.complete) {
+            ctx.drawImage(img, x, y, PIXEL_SIZE, PIXEL_SIZE);
+        } else if (img) {
+            // Placeholder if image fails to load
+            ctx.fillStyle = flower.themeColor || '#FFFFFF';
+            ctx.fillRect(x + PIXEL_SIZE/4, y + PIXEL_SIZE/4, PIXEL_SIZE/2, PIXEL_SIZE/2);
+        }
+        
+        // Store the pixel boundaries for click detection (re-use the array)
+        flower.minX = x;
+        flower.minY = y;
+        flower.maxX = x + PIXEL_SIZE;
+        flower.maxY = y + PIXEL_SIZE;
+    });
+}
+
+/**
+ * Handles clicks on the canvas to detect which flower was clicked.
+ */
+function handleCanvasClick(event) {
+    const rect = canvas.getBoundingClientRect();
+    
+    // Calculate relative click position (adjust for CSS scaling)
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const x = (event.clientX - rect.left) * scaleX;
+    const y = (event.clientY - rect.top) * scaleY;
+    
+    // Check for collision with flower boundaries
+    for (const flower of flowerCollection) {
+        if (x >= flower.minX && x < flower.maxX && y >= flower.minY && y < flower.maxY) {
+            showFlowerModal(flower);
+            return;
+        }
+    }
+}
+
+/**
+ * Shows the modal with details of the clicked flower.
+ */
+function showFlowerModal(flower) {
+    const modal = document.getElementById('flower-modal');
+    document.getElementById('modal-flower-name').textContent = flower.flowerName;
+    document.getElementById('modal-flower-date').textContent = `Received: ${formatTimestamp(flower.timestamp)}`;
+    document.getElementById('modal-flower-message').textContent = flower.message;
+    modal.classList.remove('hidden');
+}
+
+// =========================================================================
+// SECTION 6: VIEW SWITCHING & MAIN INITIALIZATION
+// =========================================================================
+
+/**
+ * Toggles visibility between the single flower view and the garden view.
+ */
 function switchView(viewName) {
     const flowerView = document.getElementById('flower-view');
     const gardenView = document.getElementById('garden-view');
     const gardenButton = document.getElementById('garden-button');
-
+    
     if (viewName === 'flower') {
         flowerView.style.display = 'block';
         gardenView.style.display = 'none';
         gardenButton.textContent = 'View Garden';
         document.body.style.justifyContent = 'center'; 
+        // Restore theme background
+        const themeName = urlParams.get('theme');
+        document.body.style.backgroundColor = themeColors[themeName] || themeColors['default'];
+        currentView = 'flower';
     } else if (viewName === 'garden') {
         flowerView.style.display = 'none';
         gardenView.style.display = 'block';
         gardenButton.textContent = 'Return to Flower';
         document.body.style.justifyContent = 'flex-start';
-        loadGarden(); 
+        document.body.style.backgroundColor = '#4B5320'; // Deep forest green for garden
+        currentView = 'garden';
     }
 }
 
-// --- Main DOM Content Loaded ---
-document.addEventListener('DOMContentLoaded', () => {
+// Global variable to store URL parameters
+const urlParams = new URLSearchParams(window.location.search);
+const themeColors = {
+    'default': '#f7f3e8',  
+    'warm': '#ffead6',     
+    'cool': '#e5f3ff',     
+    'vibrant': '#e7ffe7',
+    'lavender': '#f3e8ff' 
+};
 
-    // --- 1. Gift Page Elements ---
-    const wateringCan = document.getElementById('watering-can');
+/**
+ * Handles the main flower blooming interaction.
+ */
+const revealGift = (flowerData) => {
     const initialState = document.getElementById('initial-state');
     const giftReveal = document.getElementById('gift-reveal');
     const mainFlower = document.getElementById('main-flower');
-    const personalMessage = document.getElementById('personal-message');
     const backgroundMusic = document.getElementById('background-music');
     const sparkleOverlay = document.getElementById('sparkle-overlay'); 
-    const initialHeading = document.getElementById('watering-instruction');
-    const gardenButton = document.getElementById('garden-button');
-    let currentView = 'flower';
-    
-    // Safety check in case the element wasn't found
-    if (!wateringCan || !initialHeading) {
-           console.error("CRITICAL ERROR: Core DOM elements not found. Stopping script execution.");
-           return;
-    }
-    
-    // --- 2. Customization Logic (Retrieves data from the URL) ---
-    const urlParams = new URLSearchParams(window.location.search);
-    
-    // A. Multi-Click Mechanic Setup
-    const clicksParam = urlParams.get('clicks');
-    let requiredClicks = parseInt(clicksParam);
-    
-    // Fallback logic: If parsing fails (NaN) or results in 0 or less, use default of 3
-    if (isNaN(requiredClicks) || requiredClicks <= 0) {
-        requiredClicks = 3;
-    }
-    
-    console.log("URL Clicks Parameter Value:", clicksParam);
-    console.log("Parsed Required Clicks:", requiredClicks);
-    
-    let currentClicks = 0; 
-    
-    // B. Set the Flower Image
-    const flowerName = urlParams.get('flower');
-    if (flowerName) {
-        mainFlower.src = `${flowerName}.png`; 
-        mainFlower.alt = `A beautiful pixel art ${flowerName}`;
-    } else {
-        mainFlower.src = "Rose.png"; 
-        mainFlower.alt = "Default Rose";
+    const sparkleEnabled = urlParams.get('sparkle') === 'true';
+
+    initialState.style.display = 'none';
+    giftReveal.style.opacity = '1';
+    mainFlower.style.transform = 'scale(1)'; 
+
+    if (backgroundMusic.src) {
+        backgroundMusic.play().catch(e => console.error("Error playing music:", e));
     }
 
-    // C. Set the Personalized Message
-    const messageText = urlParams.get('message');
-    // Ensure that if the message is empty, we use the default
-    const messageContent = messageText ? decodeURIComponent(messageText) : "No message provided. Still a beautiful flower!";
-    personalMessage.textContent = messageContent; 
+    if (sparkleEnabled) {
+        sparkleOverlay.classList.remove('hidden');
+        startSparkling();
+    }
+
+    if (isAuthReady) {
+        saveFlowerToGarden(flowerData);
+    }
+};
+
+
+/**
+ * Initializes all gift-related elements and click handlers.
+ */
+document.addEventListener('DOMContentLoaded', () => {
+
+    // --- DOM Element Selection ---
+    const wateringCan = document.getElementById('watering-can');
+    const mainFlower = document.getElementById('main-flower');
+    const personalMessage = document.getElementById('personal-message');
+    const backgroundMusic = document.getElementById('background-music');
+    const initialHeading = document.getElementById('watering-instruction');
+    const gardenButton = document.getElementById('garden-button');
+    const modal = document.getElementById('flower-modal');
+    const closeModalButton = document.querySelector('#flower-modal .close-button');
     
-    // D. Set the Music Source
+    if (!wateringCan || !initialHeading) return; // Critical elements missing
+
+    // --- Retrieve URL Parameters ---
+    let requiredClicks = parseInt(urlParams.get('clicks')) || 3;
+    let currentClicks = 0; 
+    const flowerName = urlParams.get('flower') || 'Rose';
+    const messageText = urlParams.get('message');
     const musicUrl = urlParams.get('music');
+    
+    const messageContent = messageText ? decodeURIComponent(messageText) : "No message provided. Still a beautiful flower!";
+    const themeName = urlParams.get('theme');
+    const appliedThemeColor = themeColors[themeName] || themeColors['default'];
+
+    // --- Apply Initial URL Settings ---
+    mainFlower.src = `${flowerName}.png`; 
+    mainFlower.alt = `A beautiful pixel art ${flowerName}`;
+    personalMessage.textContent = messageContent; 
+    document.body.style.backgroundColor = appliedThemeColor;
+
     if (musicUrl) {
         backgroundMusic.src = decodeURIComponent(musicUrl);
     }
     
-    // E. Set the Sparkle State
-    const sparkleEnabled = urlParams.get('sparkle') === 'true';
-
-    // F. Set the Background Theme 
-    const themeName = urlParams.get('theme');
-    const themeColors = {
-        'default': '#f7f3e8',  
-        'warm': '#ffead6',     
-        'cool': '#e5f3ff',     
-        'vibrant': '#e7ffe7'   
+    // --- Data Object for Saving ---
+    const flowerData = {
+        flowerName: flowerName,
+        message: messageContent,
+        theme: themeName || 'default',
+        themeColor: appliedThemeColor
     };
-    
-    const appliedThemeColor = themeColors[themeName] || themeColors['default'];
-    document.body.style.backgroundColor = appliedThemeColor;
 
-    // --- Initial Text Update ---
-    const clickText = requiredClicks === 1 
-        ? "once" 
-        : `${requiredClicks} times`;
+    // --- Watering Click Handler ---
+    wateringCan.addEventListener('click', () => {
+        if (currentClicks < requiredClicks) {
+            currentClicks++;
+            // Visual feedback for click
+            wateringCan.style.transform = 'translateY(10px) rotate(-10deg)';
+            setTimeout(() => wateringCan.style.transform = 'translateY(0) rotate(0deg)', 100);
+            
+            const remaining = requiredClicks - currentClicks;
+            if (remaining > 0) {
+                initialHeading.textContent = `Keep clicking! Only ${remaining} more time${remaining === 1 ? '' : 's'} to bloom the flower.`;
+            } else {
+                revealGift(flowerData);
+            }
+        }
+    });
 
-    initialHeading.textContent = `These flowers need your touch! Click the can ${clickText} to water them.`;
+    // --- Initial Text Setup ---
+    const clickText = requiredClicks === 1 ? "once" : `${requiredClicks} times`;
+    initialHeading.textContent = `This gift needs your touch! Click the can ${clickText} to water it.`;
     
     // --- Garden Button Handler ---
     gardenButton.addEventListener('click', () => {
-        if (currentView === 'flower') {
-            switchView('garden');
-            currentView = 'garden';
-        } else {
-            switchView('flower');
-            currentView = 'flower';
-        }
+        switchView(currentView === 'flower' ? 'garden' : 'flower');
     });
     
-    // --- Authentication and Initialization ---
-    // Sign in the user (either with token or anonymously) to get a persistent userId
-    const attemptSignIn = () => {
-        // We only attempt real sign-in if we are NOT using the local dev config
-        if (firebaseConfig.projectId !== "local-dev-project") {
-            if (initialAuthToken) {
-                // Compat sign-in
-                auth.signInWithCustomToken(initialAuthToken).catch(e => {
-                    console.error("Custom token sign-in failed:", e);
-                    auth.signInAnonymously().catch(e => console.error("Anonymous sign-in failed:", e));
-                });
-            } else {
-                // Compat sign-in
-                auth.signInAnonymously().catch(e => console.error("Anonymous sign-in failed:", e));
-            }
-        } else {
-             // For local dev, manually set a dummy user ID to allow logic flow
-             userId = crypto.randomUUID();
-             isAuthReady = true;
-             console.warn("Local Dev Mode: Auth bypassed. Using random UUID for userId.");
-        }
-    };
-
-    // Auth State Listener (Compat)
-    // We only use this listener if we are not in local dev mode.
-    if (firebaseConfig.projectId !== "local-dev-project") {
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                userId = user.uid;
-                isAuthReady = true;
-                console.log("Firebase Auth Ready. User ID:", userId);
-                
-                // If the flower was bloomed *before* auth completed, save it now.
-                const giftBloomed = giftReveal.style.opacity === '1';
-                if (giftBloomed) {
-                     const flowerData = {
-                         flowerName: flowerName || 'Rose',
-                         message: personalMessage.textContent,
-                         theme: themeName || 'default',
-                         themeColor: appliedThemeColor
-                     };
-                     saveFlowerToGarden(flowerData);
-                }
-            } else {
-                 console.log("Firebase Auth State Changed: No user logged in. Attempting sign-in...");
-                 attemptSignIn(); 
+    // --- Canvas and Modal Handlers ---
+    if (canvas) {
+        canvas.addEventListener('click', handleCanvasClick);
+        drawGarden([]); // Initial draw to set up size and background
+    }
+    if (closeModalButton) {
+        closeModalButton.addEventListener('click', () => modal.classList.add('hidden'));
+    }
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.add('hidden');
             }
         });
-    } else {
-        // If in local dev mode, run attemptSignIn once to set dummy userId
-        attemptSignIn();
     }
 
-
-    // --- 3. Watering Mechanic Logic ---
-    wateringCan.addEventListener('click', () => {
-        
-        if (currentClicks >= requiredClicks) {
-            return;
-        }
-        
-        currentClicks++;
-        
-        // Visual feedback
-        wateringCan.style.transform = `scale(1.15) rotate(-5deg)`;
-        setTimeout(() => {
-            wateringCan.style.transform = `scale(1) rotate(0deg)`;
-        }, 100);
-        
-        if (currentClicks >= requiredClicks) {
-            
-            // --- REVEAL SEQUENCE STARTS HERE ---
-            initialState.classList.add('hidden');
-            initialState.style.display = 'none'; 
-
-            if (backgroundMusic.src) {
-                // Attempt to play music, suppressing potential errors on some browsers
-                backgroundMusic.play().catch(e => console.log("Music playback failed (user interaction required):", e)); 
-            }
-
-            setTimeout(() => {
-                giftReveal.classList.remove('hidden');
-                // Set opacity to 1 *immediately* to trigger the bloom check in onAuthStateChanged
-                giftReveal.style.opacity = 1; 
-                mainFlower.classList.add('bloomed'); 
-                
-                if (sparkleEnabled) {
-                    sparkleOverlay.classList.remove('hidden');
-                    startSparkling(); 
-                }
-                
-                // --- CRITICAL: SAVE FLOWER TO GARDEN ---
-                const flowerData = {
-                    flowerName: flowerName || 'Rose',
-                    message: messageContent,
-                    theme: themeName || 'default',
-                    themeColor: appliedThemeColor
-                };
-
-                // Save if authentication is already complete OR we are in local dev mode
-                if (isAuthReady) {
-                    saveFlowerToGarden(flowerData);
-                } else {
-                    console.warn("Auth not ready. Flower will attempt to save once auth completes via listener or on manual setting (Local Dev).");
-                }
-                
-            }, 1000); 
-            
-        } else {
-            // Update the message to show remaining clicks
-            const remaining = requiredClicks - currentClicks;
-            initialHeading.textContent = `Keep watering! ${remaining} more click${remaining !== 1 ? 's' : ''} to go!`;
-        }
-    });
-
-    // Initialize to flower view
+    // Ensure initial view state is correct
     switchView('flower');
-
 });
