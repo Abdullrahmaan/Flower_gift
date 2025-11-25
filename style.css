@@ -1,0 +1,183 @@
+/* -------------------------------------------------------------------------
+   GLOBAL STYLES & LAYOUT
+   (Primarily for non-Tailwind-compatible custom behaviors)
+------------------------------------------------------------------------- */
+body {
+    /* Base font settings and central alignment for the whole page */
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    transition: background-color 0.5s ease; /* For theme transitions */
+    padding: 20px;
+    box-sizing: border-box;
+    background-color: #f7f3e8; /* Default fallback background */
+}
+
+.hidden {
+    /* Utility class for complete removal from flow */
+    display: none !important;
+}
+
+/* -------------------------------------------------------------------------
+   FLOWER VIEW (The Interactive Gift)
+------------------------------------------------------------------------- */
+
+/* Initial state of the flower image (start small) */
+#main-flower-pre {
+    transition: all 1s ease-out;
+    transform: scale(0.5);
+    opacity: 0.5;
+}
+
+/* Watering Can interaction effects */
+#watering-can {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+#watering-can:hover {
+    transform: scale(1.05);
+}
+
+#watering-can:active {
+    transform: scale(0.95);
+}
+
+/* Water drop animation */
+.water-drop {
+    position: absolute;
+    width: 6px;
+    height: 15px;
+    background-color: #4A90E2; /* Blue water */
+    border-radius: 50%;
+    opacity: 1;
+    transform: translateY(0);
+    animation: drip 1s ease-in forwards;
+    pointer-events: none; /* Make sure it doesn't interfere with clicks */
+    z-index: 20;
+}
+
+@keyframes drip {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(150px) scale(0.5);
+    }
+}
+
+/* Sparkle Effects for Reveal */
+@keyframes sparkle-anim {
+    0% {
+        opacity: 1;
+        transform: scale(1) translate(0, 0);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0) translate(var(--x-dest), var(--y-dest));
+    }
+}
+
+.sparkle {
+    animation: sparkle-anim 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    background-color: #FFD700; /* Gold */
+}
+
+/* -------------------------------------------------------------------------
+   CLICK COUNTER ANIMATION
+------------------------------------------------------------------------- */
+
+.click-animation {
+    position: absolute;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #4CAF50; /* Green */
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+    animation: moveUpFade 1s ease-out forwards;
+    opacity: 0;
+}
+
+@keyframes moveUpFade {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    50% { opacity: 0.8; }
+    100% { opacity: 0; transform: translateY(-100px) scale(0.5); }
+}
+
+/* -------------------------------------------------------------------------
+   GARDEN VIEW (Canvas & Collection)
+------------------------------------------------------------------------- */
+#garden-view {
+    /* Container for the garden */
+    background-color: #4B5320; /* Deep forest green / dark olive */
+    min-height: 100vh;
+    padding: 4rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+#garden-canvas {
+    /* Styling for the pixel art canvas */
+    border: 8px solid #383e18;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    max-width: 100%;
+    height: auto;
+    image-rendering: pixelated; /* Ensures sharp scaling for pixel art */
+    margin: 20px auto;
+}
+
+/* -------------------------------------------------------------------------
+   MODAL (Flower Details)
+------------------------------------------------------------------------- */
+.modal {
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+}
+
+.modal > div {
+    /* Apply animation to the inner modal content */
+    animation: modal-pop 0.3s ease-out forwards;
+}
+
+@keyframes modal-pop {
+    0% {
+        opacity: 0;
+        transform: scale(0.8) translateY(-20px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.close-button {
+    line-height: 0.7; /* Ensures the X is vertically centered */
+}
+
+.close-button:hover {
+    transform: scale(1.1);
+}
+
+/* -------------------------------------------------------------------------
+   THEME STYLES (Dynamic based on JS)
+   These provide base colors that will be applied by JavaScript.
+------------------------------------------------------------------------- */
+body[data-theme="sunset"] {
+    background-color: #FFDAB9; /* Peachpuff - warm, sunset feel */
+}
+
+body[data-theme="forest"] {
+    background-color: #B2D8B2; /* Light Sage Green */
+}
+
+body[data-theme="ocean"] {
+    background-color: #B0E0E6; /* Powder Blue */
+}

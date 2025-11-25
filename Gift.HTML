@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💌 Create Your Personalized Flower Gift</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fcfcfc; /* Light, soft background */
+        }
+        .container {
+            max-width: 1000px;
+        }
+        /* Custom styling for the link display box */
+        #generated-link-container {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            word-break: break-all;
+        }
+        /* Style for the copy button */
+        #copy-button {
+            transition: background-color 0.2s;
+        }
+        #copy-button:hover {
+            background-color: #6A5ACD; /* Darker hover for the generate button's primary color */
+        }
+        /* Custom style for flower buttons to handle hover state visually */
+        .flower-button:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4 sm:p-8">
+
+    <div class="container w-full bg-white rounded-3xl shadow-2xl p-6 sm:p-10 lg:p-12 space-y-8">
+        <!-- Header -->
+        <header class="text-center">
+            <h1 class="text-4xl font-extrabold text-[#7B68EE] mb-2">Build Your Gift 🎁</h1>
+            <p class="text-gray-600 text-lg">Customize your unique interactive flower gift below and generate a shareable link.</p>
+        </header>
+        
+        <!-- Flower and Theme Selection -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- 1. Flower Type Selector -->
+            <div class="bg-indigo-50 p-6 rounded-xl shadow-inner border border-indigo-200">
+                <label for="flower-select" class="block text-xl font-semibold text-[#7B68EE] mb-3">1. Choose a Flower 🌸</label>
+                <select id="flower-select" class="w-full p-3 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-[#7B68EE] focus:border-[#7B68EE] transition duration-150">
+                    <!-- Options populated by script -->
+                </select>
+                <p class="text-sm mt-2 text-gray-500">This will be the final bloom in their garden.</p>
+            </div>
+
+            <!-- 2. Theme Selector -->
+            <div class="bg-purple-50 p-6 rounded-xl shadow-inner border border-purple-200">
+                <label for="theme-select" class="block text-xl font-semibold text-[#7B68EE] mb-3">2. Choose a Theme 🎨</label>
+                <select id="theme-select" class="w-full p-3 border border-purple-300 rounded-lg focus:ring-2 focus:ring-[#7B68EE] focus:border-[#7B68EE] transition duration-150">
+                    <!-- Options populated by script -->
+                </select>
+                <p class="text-sm mt-2 text-gray-500">Sets the background color when they open the gift.</p>
+            </div>
+        </section>
+
+        <!-- Message and Clicks -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- 3. Message Input -->
+            <div class="bg-pink-50 p-6 rounded-xl shadow-inner border border-pink-200">
+                <label for="message" class="block text-xl font-semibold text-[#7B68EE] mb-3">3. Your Message 💬</label>
+                <textarea id="message" rows="3" class="w-full p-3 border border-pink-300 rounded-lg focus:ring-2 focus:ring-[#7B68EE] focus:border-[#7B68EE] resize-none" placeholder="Write something sweet..."></textarea>
+                <p class="text-sm mt-2 text-gray-500">This message is revealed when the flower blooms!</p>
+            </div>
+
+            <!-- 4. Clicks Required -->
+            <div class="bg-green-50 p-6 rounded-xl shadow-inner border border-green-200">
+                <label for="clicks" class="block text-xl font-semibold text-[#7B68EE] mb-3">4. Clicks to Bloom (#) ✨</label>
+                <input type="number" id="clicks" value="3" min="1" max="10" class="w-full p-3 border border-green-300 rounded-lg text-center focus:ring-2 focus:ring-[#7B68EE] focus:border-[#7B68EE] transition duration-150">
+                <p class="text-sm mt-2 text-gray-500">How many times they must 'water' the plant before the flower blooms.</p>
+            </div>
+        </section>
+
+
+        <!-- 4. Generate Button -->
+        <button id="generate-button" class="w-full py-4 text-white bg-[#7B68EE] hover:bg-[#6A5ACD] font-bold text-xl rounded-lg shadow-lg transform transition duration-150 hover:scale-[1.02]">
+            <span role="img" aria-label="Gift Box">🎁</span> Generate Gift Link
+        </button>
+
+        <!-- 5. Generated Link Output -->
+        <div id="generated-link-container" class="mt-6 p-4 bg-gray-100 rounded-xl border border-dashed border-gray-400 flex flex-col items-center justify-center min-h-[100px]">
+            <p class="text-gray-600 font-medium mb-3">Your Shareable Link Will Appear Here:</p>
+            <div id="link-output-area" class="w-full flex flex-col items-center">
+                <p id="link-text" class="text-sm text-gray-800 text-center select-all break-all hidden mb-3 p-2 bg-white rounded-lg shadow-md"></p>
+                <button id="copy-button" class="mt-2 px-6 py-2 bg-[#6495ED] text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition duration-150 hidden">
+                    Copy Link to Clipboard
+                </button>
+            </div>
+        </div>
+
+        <!-- 7. Help Text -->
+        <p class="text-center text-sm text-gray-500 mt-6">
+            Note: The generated link must be shared with the recipient. This page is only for building the gift.
+        </p>
+    </div>
+
+    <!-- Load the JavaScript logic for link generation and selectors -->
+    <script src="script.js"></script>
+    <script src="generatelink.js"></script>
+</body>
+</html>
