@@ -3,908 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>💌 Personalized Flower Gift & Garden</title>
-    <!-- Load Tailwind CSS -->
+    <title>Your Personalized Flower Gift</title>
+
+    <!-- Load Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Load Firebase SDKs (v9 syntax via CDN for the script.js logic) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, collection, query, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        
+        // Expose Firebase components globally for use in the non-module script.js
+        window.firebase = {
+            initializeApp,
+            getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged,
+            getFirestore, doc, onSnapshot, collection, query, setDoc, getDoc, setLogLevel
+        };
+    </script>
+    
+    <!-- Tone.js for optional music/sound effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+    
     <style>
-        /* ========================================================================= */
-        /* BASE STYLES & FONT (From style.css & index(1).html) */
-        /* ========================================================================= */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            transition: background-color 0.5s ease-in-out;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
-            background-color: #fcfcfc; /* Default Builder background */
-        }
-        
-        .hidden {
-            display: none !important;
-        }
-
-        /* ------------------------------------------------------------------------- */
-        /* BUILDER VIEW STYLES (index (1).html content) */
-        /* ------------------------------------------------------------------------- */
-        #builder-view .container {
-            max-width: 600px;
-            width: 100%;
-            background: #ffffff;
-            padding: 2rem;
-            border-radius: 1.5rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Custom style for flower buttons to handle hover state visually */
-        .flower-button:hover {
-            transform: scale(1.05);
-        }
-
-        /* Custom styling for the link display box */
-        #generated-link-container {
-            transition: all 0.3s ease;
-            cursor: pointer;
-            word-break: break-all;
-        }
-
-        /* Style for the copy button */
-        #copy-button {
-            transition: background-color 0.2s;
-        }
-
-        #copy-button:hover {
-            background-color: #5380c8; /* Darker hover for cornflower blue */
-        }
-
-        /* ------------------------------------------------------------------------- */
-        /* GIFT VIEW STYLES (gift.html content) */
-        /* ------------------------------------------------------------------------- */
-        #flower-view {
-            /* Container for the gift view */
-            width: 90%;
-            max-width: 400px;
-            margin-top: 40px;
-            position: relative;
-            z-index: 10;
-        }
-
-        /* Initial state of the flower image (start small) */
-        #main-flower-pre {
-            transition: all 1s ease-out;
-            transform: scale(0.5);
-            opacity: 0.5;
-        }
-
-        /* Watering Can interaction effects */
-        #watering-can {
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        #watering-can:hover {
-            transform: scale(1.05);
-        }
-
-        #watering-can:active {
-            transform: scale(0.95);
-        }
-
-        /* Sparkle Effect for Gift Reveal */
-        #sparkle-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            overflow: hidden;
-            z-index: 50;
-        }
-
-        .sparkle {
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: radial-gradient(white, yellow);
-            animation: moveUpFade 1.5s ease-out forwards;
-            opacity: 0;
-        }
-
-        @keyframes moveUpFade {
-            0% { opacity: 1; transform: translateY(0) scale(1); }
-            50% { opacity: 0.8; }
-            100% { opacity: 0; transform: translateY(-100px) scale(0.5); }
-        }
-
-        /* ------------------------------------------------------------------------- */
-        /* GARDEN VIEW STYLES (Canvas) */
-        /* ------------------------------------------------------------------------- */
-        #garden-view {
-            background-color: #4B5320; /* Deep forest green / dark olive */
-            width: 100%;
-            min-height: 100vh;
-            padding: 4rem 1rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
-
-        #garden-view h1, #garden-view p {
-            color: white;
-            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
-        }
-        
+        /* Ensure canvas is responsive while maintaining the pixelated look */
         #garden-canvas {
-            /* Styling for the pixel art canvas */
-            border: 8px solid #383e18;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-            max-width: 100%;
-            height: auto;
-            image-rendering: pixelated; /* Ensures sharp scaling for pixel art */
-            margin: 20px auto;
-        }
-        
-        /* ------------------------------------------------------------------------- */
-        /* MODAL STYLES */
-        /* ------------------------------------------------------------------------- */
-        .modal {
-            background-color: rgba(0, 0, 0, 0.6); /* Dark overlay */
-            z-index: 1000;
-        }
-        .close-button {
-            line-height: 1; /* Fix vertical alignment of the close symbol */
+            display: block;
+            width: 100%; /* Fill container width */
+            max-width: 900px; /* Optional max width */
+            height: auto; /* Maintain aspect ratio */
+            image-rendering: pixelated;
         }
     </style>
 </head>
-<body class="p-0 sm:p-0">
+<body class="bg-gray-100 min-h-screen">
 
-    <!-- ========================================================================= -->
-    <!-- VIEW SWITCH BUTTON (Used by Gift/Garden View) -->
-    <!-- ========================================================================= -->
-    <button id="garden-button" class="fixed top-4 right-4 bg-gray-600 text-white p-3 rounded-xl shadow-lg hover:bg-gray-700 transition duration-300 z-50">
+    <!-- Garden/Flower View Toggle Button -->
+    <button id="garden-button" class="fixed top-4 right-4 bg-gray-700 text-white p-3 rounded-xl shadow-lg hover:bg-gray-800 transition duration-300 z-50">
         View Garden
     </button>
+
+    <!-- The Gift Builder Link (Hidden by default, used only in builder.html) -->
+    <a href="index.html" id="builder-link" class="fixed top-4 left-4 bg-blue-500 text-white p-3 rounded-xl shadow-lg hover:bg-blue-600 transition duration-300 z-50 hidden">
+        Create Your Own Gift
+    </a>
     
-    <!-- ========================================================================= -->
-    <!-- 1. BUILDER VIEW (index (1).html) - Default state if no ID in URL -->
-    <!-- ========================================================================= -->
-    <div id="builder-view" class="w-full flex justify-center py-8">
-        <div class="container bg-white p-8 rounded-2xl shadow-2xl">
+    <!-- View 1: The Interactive Flower Gift -->
+    <div id="flower-view" class="flex flex-col items-center justify-center p-4">
+        <div id="initial-state" class="container bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center justify-center text-center mt-20">
+            <h1 id="watering-instruction" class="text-3xl font-extrabold text-[#7B68EE] mb-4">
+                Water Your Seed!
+            </h1>
+            <p id="sender-message" class="text-lg text-gray-600 mb-6 italic">
+                Awaiting your touch...
+            </p>
+
+            <img id="watering-can" src="https://placehold.co/100x100/A0DAA9/FFFFFF?text=Can" alt="Watering Can" class="w-24 h-24 cursor-pointer transform transition duration-200 active:scale-95">
+            <img id="main-flower-pre" src="https://placehold.co/50x50/34D17F/FFFFFF?text=Seed" alt="The Seed" class="w-12 h-12 my-6 transition-all duration-1000">
+
+            <div id="click-counter-display" class="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full font-semibold mt-4">
+                <span id="current-clicks">0</span> / <span id="required-clicks">3</span>
+            </div>
+
+            <p class="text-sm mt-4 text-gray-500">
+                Click the watering can <span id="required-clicks-text">3</span> times to make the flower bloom!
+            </p>
+        </div>
+
+        <!-- Gift Reveal State (Initially hidden) -->
+        <div id="gift-reveal" class="container bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center justify-center text-center mt-20 hidden">
+            <h2 class="text-3xl font-bold text-green-700 mb-4 animate-pulse">It Bloomed!</h2>
+            <img id="main-flower" src="https://placehold.co/200x200/F08080/FFFFFF?text=Rose" alt="The Gift Flower" class="w-48 h-48 transform scale-0 transition-transform duration-1000 ease-out">
             
-            <header class="text-center mb-8">
-                <h1 class="text-4xl font-extrabold text-[#7B68EE] mb-2">💌 Create Your Flower Gift</h1>
-                <p class="text-gray-600">Design a personalized digital flower for someone special.</p>
-            </header>
-
-            <!-- 1. Message Input -->
-            <section class="mb-6">
-                <label for="message" class="block text-lg font-semibold text-gray-700 mb-2">1. Your Personalized Message</label>
-                <textarea id="message" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7B68EE] focus:border-transparent transition duration-150" rows="4" placeholder="e.g., 'Thank you for being you!' or 'Happy Birthday!' (Max 150 characters)" maxlength="150"></textarea>
-            </section>
-
-            <!-- 2. Flower Selection -->
-            <section class="mb-6">
-                <label class="block text-lg font-semibold text-gray-700 mb-2">2. Choose Your Flower</label>
-                <div id="flower-selector" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <!-- Flower buttons will be inserted here by JavaScript -->
-                    <!-- Placeholder buttons for visual structure -->
-                    <button data-flower="Rose" class="flower-button bg-pink-100 p-4 rounded-xl text-center shadow-md border-2 border-transparent transition duration-150 hover:border-[#FF69B4]">
-                        <img src="https://placehold.co/60x60/f8c7d3/000?text=Rose" alt="Rose" class="mx-auto mb-1 rounded-lg">
-                        <span class="text-sm font-medium text-pink-600">Rose</span>
-                    </button>
-                    <button data-flower="Tulip" class="flower-button bg-yellow-100 p-4 rounded-xl text-center shadow-md border-2 border-transparent transition duration-150 hover:border-[#FFD700]">
-                        <img src="https://placehold.co/60x60/fdfd96/000?text=Tulip" alt="Tulip" class="mx-auto mb-1 rounded-lg">
-                        <span class="text-sm font-medium text-yellow-600">Tulip</span>
-                    </button>
-                    <button data-flower="Daisy" class="flower-button bg-white p-4 rounded-xl text-center shadow-md border-2 border-transparent transition duration-150 hover:border-[#7CFC00]">
-                        <img src="https://placehold.co/60x60/ffffff/000?text=Daisy" alt="Daisy" class="mx-auto mb-1 rounded-lg">
-                        <span class="text-sm font-medium text-gray-700">Daisy</span>
-                    </button>
-                    <button data-flower="Orchid" class="flower-button bg-purple-100 p-4 rounded-xl text-center shadow-md border-2 border-transparent transition duration-150 hover:border-[#A020F0]">
-                        <img src="https://placehold.co/60x60/e6e6fa/000?text=Orchid" alt="Orchid" class="mx-auto mb-1 rounded-lg">
-                        <span class="text-sm font-medium text-purple-600">Orchid</span>
-                    </button>
-                </div>
-                <input type="hidden" id="flower-select" value="Rose"> <!-- Holds selected flower value -->
-            </section>
-
-            <!-- 3. Theme Selection -->
-            <section class="mb-6">
-                <label for="theme-select" class="block text-lg font-semibold text-gray-700 mb-2">3. Choose a Theme Color</label>
-                <select id="theme-select" class="w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#7B68EE] focus:border-transparent transition duration-150">
-                    <option value="Forest" selected>🌳 Forest Green</option>
-                    <option value="Lavender">💜 Lavender Dream</option>
-                    <option value="Sunshine">☀️ Sunshine Yellow</option>
-                    <option value="Ocean">🌊 Ocean Blue</option>
-                </select>
-            </section>
-
-            <!-- 4. Interaction Clicks -->
-            <section class="mb-8">
-                <label for="clicks" class="block text-lg font-semibold text-gray-700 mb-2">4. Set Clicks to Bloom (1-10)</label>
-                <input type="number" id="clicks" class="w-full p-3 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-[#7B68EE] focus:border-transparent transition duration-150" min="1" max="10" value="3">
-                <p class="text-center text-sm text-gray-500 mt-2">The number of times the recipient must 'water' the flower before it blooms.</p>
-            </section>
-
-            <!-- 5. Generate Button -->
-            <button id="generate-button" class="w-full py-4 text-white bg-[#7B68EE] hover:bg-[#6A5ACD] font-bold text-xl rounded-lg shadow-lg transform transition duration-150 hover:scale-[1.02]">
-                <span role="img" aria-label="Gift Box">🎁</span> Generate Gift Link
-            </button>
-
-            <!-- 6. Generated Link Output -->
-            <div id="generated-link-container" class="mt-6 p-4 bg-gray-100 rounded-xl border border-dashed border-gray-400 flex flex-col items-center justify-center min-h-[100px]">
-                <p class="text-gray-600 font-medium mb-3">Your Shareable Link Will Appear Here:</p>
-                <div id="link-output-area" class="w-full flex flex-col items-center">
-                    <p id="link-text" class="text-sm text-gray-800 text-center select-all break-all hidden mb-3 p-2 bg-white rounded-lg shadow-md"></p>
-                    <button id="copy-button" class="mt-2 px-6 py-2 bg-[#6495ED] text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition duration-150 hidden">
-                        Copy Link to Clipboard
-                    </button>
-                </div>
+            <!-- Message Box -->
+            <div class="bg-gray-50 p-6 rounded-xl shadow-inner mt-6 border-4 border-[#7B68EE] w-full">
+                <p id="personal-message" class="text-md italic text-gray-700 font-medium"></p>
             </div>
-
-            <!-- 7. Help Text -->
-            <p class="text-center text-sm text-gray-400 mt-6">
-                *The generated link will contain all the gift details. No data is stored until the recipient opens it and the flower blooms.
-            </p>
+            
+            <!-- Sparkle Effect Overlay -->
+            <div id="sparkle-overlay" class="absolute inset-0"></div>
         </div>
     </div>
 
+    <!-- View 2: The Flower Garden Collection -->
+    <div id="garden-view" class="hidden">
+        <h1 class="text-4xl font-extrabold text-white my-8 drop-shadow-lg">Your Personal Garden</h1>
+        <p class="text-white text-lg mb-8">
+             Click any flower in your garden to see its personalized message and date received.
+        </p>
 
-    <!-- ========================================================================= -->
-    <!-- 2. GIFT VIEWER (gift.html) - Hidden by default, shown if ID is in URL -->
-    <!-- ========================================================================= -->
-    <div id="gift-viewer-container" class="hidden w-full flex flex-col items-center p-4">
-
-        <!-- View 1: The Interactive Flower Gift -->
-        <div id="flower-view" class="container bg-white p-6 rounded-2xl shadow-xl border-t-8 border-t-[#7B68EE] mt-8">
-            <div id="initial-state" class="text-center">
-                <h1 id="watering-instruction" class="text-3xl font-bold text-gray-800 mb-4">Click to Water Your Seed! (3 left)</h1>
-                <img id="watering-can" src="https://placehold.co/150x150/5cb85c/fff?text=Water+Can" alt="Watering Can" width="150" height="150" class="mx-auto mb-6 transform hover:scale-105 transition duration-200">
-                <img id="main-flower-pre" src="https://placehold.co/150x150/8B4513/fff?text=Seedling" alt="Seedling" width="150" height="150" class="mx-auto mb-6">
-                <p class="text-sm mt-4 text-gray-500">Keep clicking the can to make the flower bloom!</p>
-            </div>
-
-            <!-- Hidden Gift Reveal State -->
-            <div id="gift-reveal" class="hidden text-center">
-                <h2 class="text-3xl font-bold text-green-700 mb-4 animate-pulse">It Bloomed!</h2>
-                <img id="main-flower" src="https://placehold.co/200x200/FF69B4/000?text=Rose" alt="The Gift Flower" width="200" height="200" class="mx-auto mb-6">
-                
-                <!-- Message Box -->
-                <div class="bg-white p-4 rounded-xl shadow-xl mt-6 border-4 border-yellow-400">
-                    <p id="personal-message" class="text-md italic text-gray-700 font-medium"></p>
-                </div>
-                
-                <!-- Sparkle Effect Overlay -->
-                <div id="sparkle-overlay" class="absolute inset-0 hidden"></div>
-            </div>
+        <!-- Canvas for the Pixel Garden -->
+        <div id="pixel-garden-container" class="max-w-full w-[95%] sm:w-[80%] lg:w-[600px] mx-auto">
+            <canvas id="garden-canvas" width="600" height="400" class="shadow-2xl"></canvas>
         </div>
-
-        <!-- View 2: The Flower Garden Collection -->
-        <div id="garden-view" class="hidden w-full min-h-screen">
-            <h1 class="text-4xl font-extrabold text-white my-8 drop-shadow-lg">Your Personal Garden</h1>
-            <p class="text-lg text-gray-200 mb-6 max-w-xl">
-                Click any flower in your garden to see its personalized message and date received.
-            </p>
-
-            <!-- Canvas for the Pixel Garden -->
-            <div id="pixel-garden-container" class="max-w-full">
-                <canvas id="garden-canvas"></canvas>
-            </div>
-        </div>
-        
     </div>
 
     <!-- ========================================================================= -->
-    <!-- MODAL FOR FLOWER DETAILS (Used in Garden View) -->
+    <!-- MODAL FOR FLOWER DETAILS -->
     <!-- ========================================================================= -->
     <div id="flower-modal" class="fixed inset-0 hidden modal flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl relative transform transition-all duration-300 scale-100">
+        <!-- Modal Backdrop -->
+        <div class="fixed inset-0 bg-black opacity-60 modal-close-backdrop"></div>
+        <!-- Modal Content -->
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl relative transform transition-all duration-300 scale-100 z-10">
             <button class="close-button absolute top-2 right-4 text-gray-500 hover:text-gray-900 text-3xl font-light leading-none">&times;</button>
             <h3 id="modal-flower-name" class="text-2xl font-bold text-[#7B68EE] mb-2">Flower Name</h3>
             <p id="modal-flower-date" class="text-sm text-gray-500 mb-4"></p>
-            <hr class="mb-4">
+            <hr class="mb-4 border-gray-200">
             <p id="modal-flower-message" class="text-gray-700 italic text-md"></p>
         </div>
     </div>
 
-
-    <!-- ========================================================================= -->
-    <!-- JAVASCRIPT LOGIC (Combined script (1).js and generatelink.js) -->
-    <!-- ========================================================================= -->
-    <script type="module">
-        // Import Firebase modules (using v11+ modular SDK)
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // --- Global Configuration ---
-        const FLOWER_TYPES = ['Rose', 'Tulip', 'Daisy', 'Orchid'];
-        const THEMES = {
-            Forest: { color: '#4CAF50', background: '#383e18' },
-            Lavender: { color: '#A020F0', background: '#e6e6fa' },
-            Sunshine: { color: '#FFD700', background: '#fdfd96' },
-            Ocean: { color: '#6495ED', background: '#e0f7fa' }
-        };
-        const MUSIC_URL = 'https://tonejs.github.io/examples/audio/casio/A2.mp3'; // Example Tone.js audio
-
-        // --- Firebase Setup (Environment variables provided by Canvas) ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        
-        let firebaseConfig = {};
-        if (typeof __firebase_config !== 'undefined' && __firebase_config.trim() !== '') {
-            try {
-                firebaseConfig = JSON.parse(__firebase_config);
-            } catch (e) {
-                console.error("Failed to parse __firebase_config:", e);
-            }
-        }
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        let app, db, auth, userId = null;
-        let isAuthReady = false;
-        let flowerCollection = [];
-        let currentFlowerId = null; // ID for the specific flower being viewed/watered
-
-        // Image assets (using placeholders as real external images are not allowed)
-        const flowerImages = {
-            Rose: new Image(),
-            Tulip: new Image(),
-            Daisy: new Image(),
-            Orchid: new Image(),
-            WateringCan: new Image(),
-            Seedling: new Image()
-        };
-
-        // Assign placeholder URLs to image objects
-        flowerImages.Rose.src = 'https://placehold.co/60x60/FF69B4/000?text=R';
-        flowerImages.Tulip.src = 'https://placehold.co/60x60/FFD700/000?text=T';
-        flowerImages.Daisy.src = 'https://placehold.co/60x60/FFFFFF/000?text=D';
-        flowerImages.Orchid.src = 'https://placehold.co/60x60/A020F0/000?text=O';
-        flowerImages.WateringCan.src = 'https://placehold.co/150x150/5cb85c/fff?text=Water+Can';
-        flowerImages.Seedling.src = 'https://placehold.co/150x150/8B4513/fff?text=Seedling';
-
-        const gardenBackgroundImg = new Image();
-        gardenBackgroundImg.src = 'https://placehold.co/1000x500/4B5320/fff?text=Pixel+Garden+Background';
-
-        // --- DOM Elements ---
-        // Builder View Elements
-        const builderView = document.getElementById('builder-view');
-        const messageInput = document.getElementById('message');
-        const flowerSelectInput = document.getElementById('flower-select');
-        const themeSelect = document.getElementById('theme-select');
-        const clicksInput = document.getElementById('clicks');
-        const generateButton = document.getElementById('generate-button');
-        const linkTextElement = document.getElementById('link-text');
-        const copyButton = document.getElementById('copy-button');
-        const flowerSelector = document.getElementById('flower-selector');
-        
-        // Gift/Garden View Elements
-        const giftViewerContainer = document.getElementById('gift-viewer-container');
-        const flowerView = document.getElementById('flower-view');
-        const gardenView = document.getElementById('garden-view');
-        const gardenButton = document.getElementById('garden-button');
-        const wateringCan = document.getElementById('watering-can');
-        const wateringInstruction = document.getElementById('watering-instruction');
-        const giftReveal = document.getElementById('gift-reveal');
-        const initialState = document.getElementById('initial-state');
-        const mainFlowerPre = document.getElementById('main-flower-pre');
-        const mainFlowerImg = document.getElementById('main-flower');
-        const personalMessage = document.getElementById('personal-message');
-        const sparkleOverlay = document.getElementById('sparkle-overlay');
-        const gardenCanvas = document.getElementById('garden-canvas');
-        const flowerModal = document.getElementById('flower-modal');
-        const modalFlowerName = document.getElementById('modal-flower-name');
-        const modalFlowerDate = document.getElementById('modal-flower-date');
-        const modalFlowerMessage = document.getElementById('modal-flower-message');
-        const modalCloseButton = flowerModal.querySelector('.close-button');
-
-        // --- State Variables ---
-        let clicksRemaining = 0;
-        let isBuilderPage = true; // Assumed default until URL check
-        let isGiftOpened = false;
-
-        // --- Utility Functions ---
-
-        /**
-         * Parses URL parameters to determine if the user is viewing a gift.
-         * If a gift ID is present, the app switches to the viewer mode.
-         * @returns {boolean} True if a flower ID was found, false otherwise.
-         */
-        const checkUrlForFlowerId = () => {
-            const params = new URLSearchParams(window.location.search);
-            const id = params.get('id');
-            const flower = params.get('flower');
-            const message = params.get('message');
-            const theme = params.get('theme');
-            const clicks = params.get('clicks');
-            const sparkle = params.get('sparkle');
-
-            if (id) {
-                // This is a gift link, but the flower is already in the database
-                currentFlowerId = id;
-                isBuilderPage = false;
-                switchView('flower');
-                return true;
-            } else if (flower && message && theme && clicks) {
-                // This is a new, unsaved gift link (no ID yet)
-                currentFlowerId = null;
-                isBuilderPage = false;
-                
-                // Set initial gift state from URL parameters
-                const giftData = {
-                    flower,
-                    message: decodeURIComponent(message),
-                    theme,
-                    clicks: parseInt(clicks),
-                    sparkleEnabled: sparkle === 'true',
-                    opened: false,
-                    receivedAt: null // Will be set on bloom
-                };
-                
-                // Initialize the watering game UI
-                setupWateringGame(giftData);
-                switchView('flower');
-                return true;
-            }
-
-            // Default: It's the builder page
-            isBuilderPage = true;
-            switchView('builder');
-            return false;
-        };
-
-        /**
-         * Sets up the Firebase Auth and Listener
-         */
-        const setupFirebase = async () => {
-            try {
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                
-                // Sign in with the provided custom token or anonymously
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                // Listen for authentication state changes
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        isAuthReady = true;
-                        console.log("Firebase initialized. User ID:", userId);
-                        
-                        // Proceed to check the URL and setup listeners only once authenticated
-                        if (!checkUrlForFlowerId()) {
-                            // If not viewing a gift, and on builder page, set up builder listeners
-                            setupBuilderListeners();
-                        }
-                        // Always set up garden listener as the viewer might switch to it
-                        setupFlowerCollectionListener(); 
-
-                    } else {
-                        console.log("User signed out or failed to sign in.");
-                        // Attempt sign in if not already signed in (handles anonymous sign-in)
-                        if (!auth.currentUser) {
-                            signInAnonymously(auth);
-                        }
-                    }
-                });
-            } catch (error) {
-                console.error("Firebase initialization failed:", error);
-            }
-        };
-
-        /**
-         * Switches the main view displayed to the user.
-         * @param {string} view - 'builder', 'flower', or 'garden'.
-         */
-        const switchView = (view) => {
-            builderView.classList.add('hidden');
-            giftViewerContainer.classList.add('hidden');
-            flowerView.classList.add('hidden');
-            gardenView.classList.add('hidden');
-            gardenButton.classList.add('hidden');
-            document.body.style.backgroundColor = '#fcfcfc'; // Default builder/gift color
-
-            if (view === 'builder') {
-                builderView.classList.remove('hidden');
-                // The switch button is not needed on the builder page
-            } else if (view === 'flower') {
-                giftViewerContainer.classList.remove('hidden');
-                flowerView.classList.remove('hidden');
-                gardenButton.textContent = 'View My Garden 🪴';
-                gardenButton.onclick = () => switchView('garden');
-                gardenButton.classList.remove('hidden');
-            } else if (view === 'garden') {
-                giftViewerContainer.classList.remove('hidden');
-                gardenView.classList.remove('hidden');
-                document.body.style.backgroundColor = THEMES.Forest.background; // Darker garden theme
-                gardenButton.textContent = 'Back to Gift 🎁';
-                gardenButton.onclick = () => switchView('flower');
-                gardenButton.classList.remove('hidden');
-                // Ensure garden is drawn if data is ready
-                if (isAuthReady && flowerCollection.length > 0) {
-                    drawGarden(flowerCollection);
-                }
-            }
-        };
-
-        // --- BUILDER VIEW LOGIC (generatelink.js content) ---
-
-        /**
-         * Updates the hidden input and styling when a flower button is clicked.
-         * @param {Event} e 
-         */
-        const handleFlowerSelection = (e) => {
-            const button = e.target.closest('.flower-button');
-            if (!button) return;
-
-            const selectedFlower = button.dataset.flower;
-            flowerSelectInput.value = selectedFlower;
-
-            document.querySelectorAll('.flower-button').forEach(btn => {
-                btn.classList.remove('border-4', 'border-[#7B68EE]');
-                btn.classList.add('border-2', 'border-transparent');
-            });
-            button.classList.add('border-4', 'border-[#7B68EE]');
-            button.classList.remove('border-2', 'border-transparent');
-        };
-
-        /**
-         * Generates the sharable URL with all gift parameters.
-         */
-        const generateGift = () => {
-            const message = encodeURIComponent(messageInput.value.trim() || "A gift for you!");
-            const flower = flowerSelectInput.value;
-            const theme = themeSelect.value;
-            const clicks = Math.max(1, Math.min(10, parseInt(clicksInput.value) || 3));
-            const sparkleEnabled = 'true'; // Sparkle is always enabled in this version
-
-            // Calculate the base URL
-            let baseUrl = window.location.href;
-            const hashIndex = baseUrl.indexOf('#');
-            if (hashIndex !== -1) {
-                baseUrl = baseUrl.substring(0, hashIndex);
-            }
-            const queryIndex = baseUrl.indexOf('?');
-            if (queryIndex !== -1) {
-                baseUrl = baseUrl.substring(0, queryIndex);
-            }
-
-            const link = `${baseUrl}?flower=${flower}&message=${message}&theme=${theme}&clicks=${clicks}&sparkle=${sparkleEnabled}`;
-            
-            linkTextElement.textContent = link;
-            linkTextElement.classList.remove('hidden');
-            copyButton.classList.remove('hidden');
-            
-            // Update button feedback
-            generateButton.textContent = 'Link Generated! Copy Below.';
-            generateButton.classList.add('bg-green-500', 'hover:bg-green-600');
-            generateButton.classList.remove('bg-[#7B68EE]', 'hover:bg-[#6A5ACD]');
-        };
-
-        /**
-         * Copies the generated link to the clipboard.
-         */
-        const handleCopyLink = () => {
-            const linkToCopy = linkTextElement.textContent;
-            
-            // Simple clipboard copy logic using execCommand for better iFrame compatibility
-            if (document.execCommand('copy')) {
-                // Success feedback
-                const originalText = 'Copy Link to Clipboard';
-                copyButton.textContent = 'Copied!';
-                copyButton.classList.add('bg-green-500');
-                copyButton.classList.remove('bg-[#6495ED]');
-                
-                setTimeout(() => {
-                    copyButton.textContent = originalText;
-                    copyButton.classList.remove('bg-green-500');
-                    copyButton.classList.add('bg-[#6495ED]');
-                }, 1500);
-            } else {
-                console.error("Copy failed. Please manually select and copy the text.");
-            }
-        };
-
-        const setupBuilderListeners = () => {
-            // Set up initial selection style for the first flower
-            document.querySelector('.flower-button[data-flower="Rose"]').classList.add('border-4', 'border-[#7B68EE]');
-
-            // Event listeners
-            flowerSelector.addEventListener('click', handleFlowerSelection);
-            generateButton.onclick = generateGift;
-            copyButton.onclick = handleCopyLink;
-        };
-
-        // --- GIFT/GARDEN VIEW LOGIC (script (1).js content) ---
-
-        /**
-         * Initializes the flower watering game with gift data.
-         * @param {object} data - The gift data from the URL.
-         */
-        const setupWateringGame = (data) => {
-            clicksRemaining = data.clicks;
-            
-            // Apply theme
-            document.body.style.backgroundColor = THEMES[data.theme]?.background || THEMES.Forest.background;
-            flowerView.style.borderTopColor = THEMES[data.theme]?.color || THEMES.Forest.color;
-            wateringInstruction.style.color = THEMES[data.theme]?.color || THEMES.Forest.color;
-
-            // Set up UI
-            wateringInstruction.textContent = `Click to Water Your Seed! (${clicksRemaining} left)`;
-            mainFlowerPre.src = flowerImages.Seedling.src; // Show initial seedling
-
-            // Store data for later use on bloom
-            wateringCan.dataset.flower = data.flower;
-            wateringCan.dataset.message = data.message;
-            wateringCan.dataset.theme = data.theme;
-            wateringCan.dataset.sparkle = data.sparkleEnabled;
-
-            // Attach watering click listener
-            wateringCan.onclick = handleWateringClick;
-
-            // Ensure only the initial state is visible
-            initialState.classList.remove('hidden');
-            giftReveal.classList.add('hidden');
-        };
-
-        /**
-         * Handles the click on the watering can.
-         */
-        const handleWateringClick = async () => {
-            if (clicksRemaining > 0) {
-                clicksRemaining--;
-                wateringInstruction.textContent = `Click to Water Your Seed! (${clicksRemaining} left)`;
-                
-                // Visual feedback (optional: add sound/animation here)
-                createWaterEffect(wateringCan.getBoundingClientRect());
-
-                if (clicksRemaining === 0) {
-                    await bloomFlower();
-                }
-            }
-        };
-
-        /**
-         * Triggers the flower bloom and saves the gift to the garden.
-         */
-        const bloomFlower = async () => {
-            if (isGiftOpened) return; // Prevent double-blooming
-
-            isGiftOpened = true;
-            wateringCan.onclick = null; // Disable further clicks
-
-            // 1. Get gift data from the watering can's dataset
-            const flower = wateringCan.dataset.flower;
-            const message = wateringCan.dataset.message;
-            const theme = wateringCan.dataset.theme;
-            const sparkleEnabled = wateringCan.dataset.sparkle === 'true';
-
-            // 2. Animate the transition
-            initialState.classList.add('hidden');
-            giftReveal.classList.remove('hidden');
-            mainFlowerImg.src = flowerImages[flower]?.src || flowerImages.Rose.src;
-            personalMessage.textContent = message;
-
-            if (sparkleEnabled) {
-                sparkleOverlay.classList.remove('hidden');
-                for (let i = 0; i < 30; i++) {
-                    setTimeout(() => createSparkle(), i * 100);
-                }
-                setTimeout(() => sparkleOverlay.classList.add('hidden'), 3500);
-            }
-
-            // 3. Save to Firestore (only if currentFlowerId is null, i.e., it's a new gift)
-            if (!currentFlowerId && userId) {
-                const newFlowerData = {
-                    flowerName: flower,
-                    message: message,
-                    theme: theme,
-                    receivedAt: new Date().toISOString(),
-                    userId: userId,
-                    position: { x: Math.random(), y: Math.random() } // Random initial position
-                };
-                
-                const flowerRef = doc(db, 'artifacts', appId, 'users', userId, 'flowers', new Date().getTime().toString());
-                try {
-                    await setDoc(flowerRef, newFlowerData);
-                    currentFlowerId = flowerRef.id; // Store the new ID
-                    console.log("Flower saved to garden with ID:", currentFlowerId);
-                } catch (error) {
-                    console.error("Error saving flower to Firestore:", error);
-                }
-            } else if (currentFlowerId && userId) {
-                // If it was already saved (id in URL), update its 'opened' status if needed.
-                // Not strictly necessary here as we only save new ones on bloom.
-            }
-        };
-
-        /**
-         * Sets up a real-time listener for the user's flower collection.
-         */
-        const setupFlowerCollectionListener = () => {
-            if (!isAuthReady || !userId) return;
-
-            const flowersRef = collection(db, 'artifacts', appId, 'users', userId, 'flowers');
-            const q = query(flowersRef);
-            
-            onSnapshot(q, (snapshot) => {
-                flowerCollection = [];
-                snapshot.forEach(doc => {
-                    flowerCollection.push({ id: doc.id, ...doc.data() });
-                });
-                console.log("Garden data updated:", flowerCollection.length, "flowers.");
-
-                // Re-draw the garden if the view is active
-                if (!gardenView.classList.contains('hidden')) {
-                    drawGarden(flowerCollection);
-                }
-            }, (error) => {
-                console.error("Error listening to flower collection:", error);
-            });
-        };
-
-        /**
-         * Draws the garden on the canvas using the flower collection data.
-         * @param {Array} flowers - Array of flower objects from Firestore.
-         */
-        const drawGarden = (flowers) => {
-            const ctx = gardenCanvas.getContext('2d');
-            
-            // Set canvas size (responsive logic)
-            const container = document.getElementById('pixel-garden-container');
-            const aspectRatio = 2; // e.g., 500w / 250h
-            const width = container.offsetWidth;
-            const height = width / aspectRatio;
-
-            gardenCanvas.width = width;
-            gardenCanvas.height = height;
-
-            // Draw the background image (stretched placeholder)
-            ctx.drawImage(gardenBackgroundImg, 0, 0, width, height);
-
-            // Draw each flower
-            flowers.forEach(flower => {
-                const img = flowerImages[flower.flowerName] || flowerImages.Rose;
-                const size = 50; // Flower size
-                const x = flower.position.x * (width - size);
-                const y = flower.position.y * (height - size);
-
-                // Draw image on canvas
-                ctx.drawImage(img, x, y, size, size);
-
-                // Store flower data on canvas for click detection
-                flower.x = x;
-                flower.y = y;
-                flower.size = size;
-            });
-            
-            // Attach click listener for modal
-            gardenCanvas.onclick = (event) => handleGardenClick(event, flowers);
-        };
-
-        /**
-         * Handles clicks on the garden canvas to show flower details.
-         * @param {Event} event - Click event.
-         * @param {Array} flowers - Array of flower objects with position data.
-         */
-        const handleGardenClick = (event, flowers) => {
-            const rect = gardenCanvas.getBoundingClientRect();
-            const scaleX = gardenCanvas.width / rect.width;
-            const scaleY = gardenCanvas.height / rect.height;
-
-            const clientX = event.clientX;
-            const clientY = event.clientY;
-
-            // Calculate click position relative to canvas coordinate system
-            const x = (clientX - rect.left) * scaleX;
-            const y = (clientY - rect.top) * scaleY;
-            
-            // Check if click hits a flower
-            const clickedFlower = flowers.find(f => 
-                x >= f.x && x <= f.x + f.size && 
-                y >= f.y && y <= f.y + f.size
-            );
-
-            if (clickedFlower) {
-                showFlowerModal(clickedFlower);
-            }
-        };
-
-        /**
-         * Shows the modal with detailed information about a flower.
-         * @param {object} flower - The flower data.
-         */
-        const showFlowerModal = (flower) => {
-            modalFlowerName.textContent = flower.flowerName;
-            modalFlowerMessage.textContent = flower.message;
-            
-            const date = new Date(flower.receivedAt);
-            modalFlowerDate.textContent = `Received on: ${date.toLocaleDateString()} at ${date.toLocaleTimeString()}`;
-
-            flowerModal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden'; // Prevent scrolling
-        };
-
-        // Close modal listener
-        modalCloseButton.onclick = () => {
-            flowerModal.classList.add('hidden');
-            document.body.style.overflow = 'auto';
-        };
-
-        // --- Visual Effects ---
-
-        /**
-         * Creates a temporary sparkle effect element.
-         */
-        const createSparkle = () => {
-            const sparkle = document.createElement('div');
-            sparkle.className = 'sparkle';
-            sparkle.style.left = `${Math.random() * 100}%`;
-            sparkle.style.top = `${Math.random() * 100}%`;
-            sparkle.style.animationDuration = `${1.5 + Math.random()}s`;
-            sparkle.style.opacity = '1';
-            sparkleOverlay.appendChild(sparkle);
-
-            setTimeout(() => {
-                sparkle.remove();
-            }, 3000);
-        };
-
-        /**
-         * Creates a temporary water drop animation.
-         * @param {DOMRect} rect - Bounding box of the watering can.
-         */
-        const createWaterEffect = (rect) => {
-            const drop = document.createElement('div');
-            drop.style.position = 'absolute';
-            drop.style.width = '10px';
-            drop.style.height = '10px';
-            drop.style.borderRadius = '50%';
-            drop.style.backgroundColor = '#6495ED'; // Cornflower Blue
-            drop.style.left = `${rect.left + rect.width / 2}px`;
-            drop.style.top = `${rect.bottom - 10}px`;
-            drop.style.opacity = '1';
-            drop.style.transition = 'transform 0.5s ease-out, opacity 0.5s ease-in';
-            drop.style.zIndex = '50';
-            document.body.appendChild(drop);
-
-            // Animate the drop down and fade
-            setTimeout(() => {
-                drop.style.transform = 'translateY(100px)';
-                drop.style.opacity = '0';
-            }, 50);
-
-            setTimeout(() => {
-                drop.remove();
-            }, 600);
-        };
-
-
-        // --- Initialization ---
-
-        // Wait for DOM content to load, then initialize Firebase and check URL
-        document.addEventListener('DOMContentLoaded', () => {
-            setupFirebase();
-
-            // Resize listener for responsive canvas drawing
-            window.addEventListener('resize', () => {
-                if (!gardenView.classList.contains('hidden') && flowerCollection.length > 0) {
-                    drawGarden(flowerCollection);
-                }
-            });
-        });
-    </script>
+    <!-- JAVASCRIPT LOGIC (Main App Script) -->
+    <script src="script.js"></script>
 </body>
 </html>
