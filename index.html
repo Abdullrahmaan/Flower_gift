@@ -3,119 +3,355 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>💌 Create Your Personalized Flower Gift</title>
+    <title>💌 Digital Flower Garden</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #fcfcfc; /* Light, soft background */
+            transition: background-color 0.5s ease-in-out;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #fcfcfc;
         }
-        .container {
-            max-width: 1000px;
+        .hidden { display: none !important; }
+        
+        /* Interactive Elements */
+        .flower-button:hover { transform: scale(1.05); }
+        .flower-selected { border-color: #7B68EE !important; border-width: 4px !important; }
+        
+        /* Animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
-        /* Custom styling for the link display box */
-        #generated-link-container {
-            transition: all 0.3s ease;
-            cursor: pointer;
-            word-break: break-all;
-        }
-        /* Style for the copy button */
-        #copy-button {
-            transition: background-color 0.2s;
-        }
-        #copy-button:hover {
-            background-color: #6A5ACD; /* Darker hover for the generate button's primary color */
-        }
-        /* Custom style for flower buttons to handle hover state visually */
-        .flower-button:hover {
-            transform: scale(1.05);
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        
+        /* Garden Canvas */
+        #garden-canvas {
+            border: 8px solid #383e18;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            image-rendering: pixelated;
+            max-width: 100%;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-4 sm:p-8">
+<body>
 
-    <div class="container w-full bg-white p-6 sm:p-10 rounded-3xl shadow-2xl">
-        <header class="text-center mb-10">
-            <h1 class="text-4xl sm:text-5xl font-extrabold text-[#7B68EE] mb-2">Build Your Gift</h1>
-            <p class="text-gray-600 text-lg">Customize the surprise before you share the magic!</p>
+    <button id="nav-button" class="fixed top-4 right-4 hidden bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-gray-700 z-50">
+        View Garden 🪴
+    </button>
+
+    <div id="builder-view" class="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-xl mt-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold text-[#7B68EE] mb-2">💌 Build a Flower Gift</h1>
+            <p class="text-gray-600">Create a digital seed that grows into a message.</p>
         </header>
 
-        <!-- 1. Flower Selection -->
-        <section class="mb-8">
-            <h2 class="text-xl font-semibold text-gray-700 mb-3 flex items-center">
-                <span role="img" aria-label="Flower">🌸</span> 1. Choose a Flower
-            </h2>
-            <div class="flex flex-wrap justify-center gap-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
-                <button class="flower-button px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition duration-150 border-2 border-transparent hover:border-purple-400" data-flower="Rose">🌹 Rose</button>
-                <button class="flower-button px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition duration-150 border-2 border-transparent hover:border-purple-400" data-flower="Tulip">🌷 Tulip</button>
-                <button class="flower-button px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition duration-150 border-2 border-transparent hover:border-purple-400" data-flower="Sunflower">🌻 Sunflower</button>
-                <button class="flower-button px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition duration-150 border-2 border-transparent hover:border-purple-400" data-flower="Daisy">🌼 Daisy</button>
-                <button class="flower-button px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition duration-150 border-2 border-transparent hover:border-purple-400" data-flower="Orchid"> Orchis</button>
-                <button class="flower-button px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition duration-150 border-2 border-transparent hover:border-purple-400" data-flower="Carnation"> Carnation</button>
-                <button class="flower-button px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition duration-150 border-2 border-transparent hover:border-purple-400" data-flower="Poppy"> Poppy</button>
-                <input type="hidden" id="flower-select" value="Rose">
-            </div>
-            <p class="text-center text-sm text-gray-500 mt-2">Selected Flower: <span id="selected-flower-text" class="font-bold text-[#7B68EE]">🌹 Rose</span></p>
-        </section>
-
-        <!-- 2. Personalized Message -->
-        <section class="mb-8">
-            <h2 class="text-xl font-semibold text-gray-700 mb-3 flex items-center">
-                <span role="img" aria-label="Message">✉️</span> 2. Write Your Message
-            </h2>
-            <textarea id="message" rows="4" class="w-full p-4 border-2 border-gray-300 rounded-xl focus:border-[#7B68EE] focus:ring focus:ring-[#7B68EE] focus:ring-opacity-50 transition duration-150" placeholder="Type your heartfelt message here..."></textarea>
-        </section>
-
-        <!-- 3. Theme Selection (Music/Vibes) -->
-        <section class="mb-8">
-            <h2 class="text-xl font-semibold text-gray-700 mb-3 flex items-center">
-                <span role="img" aria-label="Sparkles">✨</span> 3. Experience Details
-            </h2>
-            <div class="flex flex-col sm:flex-row gap-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                <!-- Theme/Music Selection -->
-                <div class="flex-1">
-                    <label for="theme-select" class="block text-sm font-medium text-gray-700 mb-1">Background Theme:</label>
-                    <select id="theme-select" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50">
-                        <option value="light">Light & Cheerful</option>
-                        <option value="dark">Dark & Cozy</option>
-                        <option value="forest">Deep Forest</option>
-                    </select>
-                </div>
-                <!-- Clicks Required -->
-                <div class="flex-1">
-                    <label for="clicks" class="block text-sm font-medium text-gray-700 mb-1">Watering Clicks (1-10):</label>
-                    <input type="number" id="clicks" min="1" max="10" value="3" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 text-center" placeholder="3">
-                </div>
-            </div>
-            <p class="text-center text-sm text-gray-500 mt-2">This is how many times they need to click the can before the flower blooms.</p>
-        </section>
-
-
-        <!-- 4. Generate Button -->
-        <button id="generate-button" class="w-full py-4 text-white bg-[#7B68EE] hover:bg-[#6A5ACD] font-bold text-xl rounded-lg shadow-lg transform transition duration-150 hover:scale-[1.02]">
-            <span role="img" aria-label="Gift Box">🎁</span> Generate Gift Link
-        </button>
-
-        <!-- 5. Generated Link Output -->
-        <div id="generated-link-container" class="mt-6 p-4 bg-gray-100 rounded-xl border border-dashed border-gray-400 flex flex-col items-center justify-center min-h-[100px]">
-            <p class="text-gray-600 font-medium mb-3">Your Shareable Link Will Appear Here:</p>
-            <div id="link-output-area" class="w-full flex flex-col items-center">
-                <p id="link-text" class="text-sm text-gray-800 text-center select-all break-all hidden mb-3 p-2 bg-white rounded-lg shadow-md"></p>
-                <button id="copy-button" class="mt-2 px-6 py-2 bg-[#6495ED] text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition duration-150 hidden">
-                    Copy Link to Clipboard
-                </button>
-            </div>
+        <div class="mb-6">
+            <label class="block text-lg font-bold text-gray-700 mb-2">1. Your Message</label>
+            <textarea id="input-message" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#7B68EE]" rows="3" placeholder="e.g. Happy Birthday!"></textarea>
         </div>
 
-        <!-- 6. Help Text -->
-        <p class="text-center text-sm text-gray-500 mt-6">
-            <span role="img" aria-label="Info">ℹ️</span> The generated link will take the recipient to the `gift.html` page with your customizations.
-        </p>
+        <div class="mb-6">
+            <label class="block text-lg font-bold text-gray-700 mb-2">2. Choose Flower</label>
+            <div class="grid grid-cols-4 gap-4" id="flower-options">
+                <button onclick="selectFlower('Rose', this)" class="flower-button border-2 border-transparent bg-pink-50 p-2 rounded-xl">
+                    <img src="https://placehold.co/60x60/f8c7d3/000?text=Rose" class="mx-auto rounded">
+                    <span class="text-xs font-bold text-pink-600">Rose</span>
+                </button>
+                <button onclick="selectFlower('Tulip', this)" class="flower-button border-2 border-transparent bg-yellow-50 p-2 rounded-xl">
+                    <img src="https://placehold.co/60x60/fdfd96/000?text=Tulip" class="mx-auto rounded">
+                    <span class="text-xs font-bold text-yellow-600">Tulip</span>
+                </button>
+                <button onclick="selectFlower('Daisy', this)" class="flower-button border-2 border-transparent bg-gray-50 p-2 rounded-xl">
+                    <img src="https://placehold.co/60x60/ffffff/000?text=Daisy" class="mx-auto rounded">
+                    <span class="text-xs font-bold text-gray-600">Daisy</span>
+                </button>
+                <button onclick="selectFlower('Orchid', this)" class="flower-button border-2 border-transparent bg-purple-50 p-2 rounded-xl">
+                    <img src="https://placehold.co/60x60/e6e6fa/000?text=Orchid" class="mx-auto rounded">
+                    <span class="text-xs font-bold text-purple-600">Orchid</span>
+                </button>
+            </div>
+            <input type="hidden" id="selected-flower" value="Rose">
+        </div>
 
+        <div class="mb-6">
+            <label class="block text-lg font-bold text-gray-700 mb-2">3. Theme Color</label>
+            <select id="input-theme" class="w-full p-3 border rounded-lg bg-white">
+                <option value="Forest">🌳 Forest Green</option>
+                <option value="Lavender">💜 Lavender Dream</option>
+                <option value="Sunshine">☀️ Sunshine Yellow</option>
+                <option value="Ocean">🌊 Ocean Blue</option>
+            </select>
+        </div>
+
+        <div class="mb-8">
+            <label class="block text-lg font-bold text-gray-700 mb-2">4. Clicks to Bloom</label>
+            <input type="number" id="input-clicks" class="w-full p-3 border rounded-lg" value="5" min="1" max="20">
+        </div>
+
+        <button onclick="generateLink()" class="w-full py-4 text-white bg-[#7B68EE] hover:bg-[#6A5ACD] font-bold text-xl rounded-lg shadow-lg transition transform hover:scale-105">
+            🎁 Generate Gift Link
+        </button>
+
+        <div id="result-area" class="hidden mt-6 p-4 bg-gray-100 rounded-xl border-dashed border-2 border-gray-300 text-center">
+            <p class="text-gray-600 mb-2">Share this link:</p>
+            <p id="share-link" class="font-mono text-sm bg-white p-2 rounded select-all break-all mb-3"></p>
+            <button onclick="copyLink()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Copy Link</button>
+        </div>
     </div>
 
-    <!-- Load the link generation script -->
-    <script src="generatelink.js"></script>
+
+    <div id="gift-view" class="hidden w-full max-w-lg mt-10 text-center">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl border-t-8 border-[#7B68EE]">
+            
+            <div id="seed-stage">
+                <h1 id="water-title" class="text-2xl font-bold text-gray-800 mb-4">Someone sent you a flower!</h1>
+                <p class="text-gray-500 mb-6">Tap the watering can to make it bloom.</p>
+                
+                <div class="relative inline-block cursor-pointer group" onclick="waterPlant()">
+                    <img src="https://placehold.co/150x150/5cb85c/fff?text=🚿" class="w-32 mx-auto animate-float transition transform group-active:rotate-12">
+                    <div class="mt-4">
+                        <img src="https://placehold.co/100x100/8B4513/fff?text=🌱" class="w-24 mx-auto">
+                    </div>
+                </div>
+                <p id="click-counter" class="mt-4 font-bold text-[#7B68EE]">5 drops needed</p>
+            </div>
+
+            <div id="bloom-stage" class="hidden">
+                <h1 class="text-3xl font-extrabold text-green-600 mb-4 animate-bounce">It Bloomed!</h1>
+                <img id="final-flower-img" src="" class="w-48 mx-auto mb-6 rounded-xl shadow-lg">
+                <div class="bg-yellow-50 p-4 rounded-xl border border-yellow-200">
+                    <p id="final-message" class="text-xl font-handwriting italic text-gray-800"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="garden-view" class="hidden w-full text-center p-4">
+        <h1 class="text-4xl font-bold text-white mb-4 drop-shadow-md">Your Garden</h1>
+        <div id="garden-container" class="max-w-4xl mx-auto">
+            <canvas id="garden-canvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // ------------------------------------------------------------------
+        // 1. FIREBASE CONFIGURATION
+        // ------------------------------------------------------------------
+        // TODO: PASTE YOUR FIREBASE CONFIG HERE
+        const firebaseConfig = {
+            apiKey: "PASTE_YOUR_API_KEY_HERE",
+            authDomain: "PASTE_YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "PASTE_YOUR_PROJECT_ID",
+            storageBucket: "PASTE_YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "PASTE_YOUR_SENDER_ID",
+            appId: "PASTE_YOUR_APP_ID"
+        };
+        // ------------------------------------------------------------------
+
+        // Initialize Firebase
+        let db, auth;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            auth = firebase.auth();
+            auth.signInAnonymously().catch(console.error);
+        } catch (e) {
+            console.error("Firebase Config Error: Did you paste your keys?", e);
+            alert("Error: Firebase keys missing in code.");
+        }
+
+        // State Variables
+        const FLOWER_IMAGES = {
+            'Rose': 'https://placehold.co/200x200/FF69B4/000?text=Rose',
+            'Tulip': 'https://placehold.co/200x200/FFD700/000?text=Tulip',
+            'Daisy': 'https://placehold.co/200x200/FFFFFF/000?text=Daisy',
+            'Orchid': 'https://placehold.co/200x200/A020F0/000?text=Orchid'
+        };
+        const THEMES = {
+            'Forest': '#383e18',
+            'Lavender': '#e6e6fa',
+            'Sunshine': '#fdfd96',
+            'Ocean': '#e0f7fa'
+        };
+
+        let giftData = null;
+        let clicksLeft = 0;
+
+        // ------------------------------------------------------------------
+        // 2. INITIALIZATION & ROUTING
+        // ------------------------------------------------------------------
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            
+            // Check if we are opening a gift link
+            if (params.has('flower') && params.has('message')) {
+                // We are in Viewer Mode
+                giftData = {
+                    flower: params.get('flower'),
+                    message: decodeURIComponent(params.get('message')),
+                    theme: params.get('theme'),
+                    clicks: parseInt(params.get('clicks')) || 5
+                };
+                startGiftView();
+            } else {
+                // We are in Builder Mode
+                document.getElementById('builder-view').classList.remove('hidden');
+                // Highlight first flower
+                document.querySelector('.flower-button').classList.add('flower-selected');
+            }
+        });
+
+        // ------------------------------------------------------------------
+        // 3. BUILDER LOGIC
+        // ------------------------------------------------------------------
+        function selectFlower(flowerName, btnElement) {
+            document.getElementById('selected-flower').value = flowerName;
+            
+            // Visual Update
+            document.querySelectorAll('.flower-button').forEach(b => b.classList.remove('flower-selected'));
+            btnElement.classList.add('flower-selected');
+        }
+
+        function generateLink() {
+            const flower = document.getElementById('selected-flower').value;
+            const message = encodeURIComponent(document.getElementById('input-message').value || "A gift for you!");
+            const theme = document.getElementById('input-theme').value;
+            const clicks = document.getElementById('input-clicks').value;
+
+            // Create URL (Current Page + Query Params)
+            const baseUrl = window.location.href.split('?')[0];
+            const fullLink = `${baseUrl}?flower=${flower}&message=${message}&theme=${theme}&clicks=${clicks}`;
+
+            document.getElementById('share-link').innerText = fullLink;
+            document.getElementById('result-area').classList.remove('hidden');
+        }
+
+        function copyLink() {
+            const linkText = document.getElementById('share-link').innerText;
+            navigator.clipboard.writeText(linkText).then(() => {
+                alert("Link copied!");
+            });
+        }
+
+        // ------------------------------------------------------------------
+        // 4. GIFT VIEWER LOGIC
+        // ------------------------------------------------------------------
+        function startGiftView() {
+            // Hide builder, show gift
+            document.getElementById('builder-view').classList.add('hidden');
+            document.getElementById('gift-view').classList.remove('hidden');
+
+            // Apply Theme
+            document.body.style.backgroundColor = THEMES[giftData.theme] || '#fcfcfc';
+
+            // Setup Game
+            clicksLeft = giftData.clicks;
+            document.getElementById('click-counter').innerText = `${clicksLeft} drops needed`;
+            
+            // Setup Nav
+            const navBtn = document.getElementById('nav-button');
+            navBtn.classList.remove('hidden');
+            navBtn.innerText = "View Garden 🪴";
+            navBtn.onclick = () => showGarden();
+        }
+
+        function waterPlant() {
+            if (clicksLeft > 0) {
+                clicksLeft--;
+                document.getElementById('click-counter').innerText = 
+                    clicksLeft > 0 ? `${clicksLeft} drops needed...` : "Blooming...";
+                
+                if (clicksLeft === 0) {
+                    revealGift();
+                }
+            }
+        }
+
+        function revealGift() {
+            const imgUrl = FLOWER_IMAGES[giftData.flower] || FLOWER_IMAGES['Rose'];
+            
+            document.getElementById('seed-stage').classList.add('hidden');
+            document.getElementById('bloom-stage').classList.remove('hidden');
+            
+            document.getElementById('final-flower-img').src = imgUrl;
+            document.getElementById('final-message').innerText = giftData.message;
+
+            saveToGarden();
+        }
+
+        function saveToGarden() {
+            // Save to Firestore (Anonymous User)
+            if (auth.currentUser) {
+                const userId = auth.currentUser.uid;
+                db.collection('users').doc(userId).collection('garden').add({
+                    flower: giftData.flower,
+                    message: giftData.message,
+                    date: new Date(),
+                    x: Math.random(), // Random position for garden
+                    y: Math.random()
+                });
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // 5. GARDEN LOGIC
+        // ------------------------------------------------------------------
+        function showGarden() {
+            document.getElementById('gift-view').classList.add('hidden');
+            document.getElementById('garden-view').classList.remove('hidden');
+            document.body.style.backgroundColor = '#383e18'; // Dark garden background
+
+            const canvas = document.getElementById('garden-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set size
+            canvas.width = 800;
+            canvas.height = 400;
+
+            // Draw Background
+            ctx.fillStyle = "#4B5320";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Fetch and Draw Flowers
+            if (auth.currentUser) {
+                const userId = auth.currentUser.uid;
+                db.collection('users').doc(userId).collection('garden').get().then(snap => {
+                    snap.forEach(doc => {
+                        const data = doc.data();
+                        const img = new Image();
+                        img.src = FLOWER_IMAGES[data.flower];
+                        img.onload = () => {
+                            const x = data.x * (canvas.width - 50);
+                            const y = data.y * (canvas.height - 50);
+                            ctx.drawImage(img, x, y, 50, 50);
+                        };
+                    });
+                });
+            }
+            
+            // Nav Toggle
+            const navBtn = document.getElementById('nav-button');
+            navBtn.innerText = "Back to Gift 🎁";
+            navBtn.onclick = () => {
+                document.getElementById('garden-view').classList.add('hidden');
+                document.getElementById('gift-view').classList.remove('hidden');
+                document.body.style.backgroundColor = THEMES[giftData.theme];
+            };
+        }
+
+    </script>
 </body>
 </html>
