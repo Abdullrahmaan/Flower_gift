@@ -64,11 +64,9 @@
                 
                 <div class="relative h-64 flex items-center justify-center">
                     <div id="watering-can" onclick="waterPlant()" class="cursor-pointer transition transform active:rotate-12 active:scale-95 z-10 hover:scale-105">
-                        <img src="https://placehold.co/120x120/5cb85c/fff?text=🚿" class="animate-float mx-auto drop-shadow-xl">
+                        <img src="watering_can.png" class="animate-float mx-auto drop-shadow-xl">
                         <p class="mt-2 text-sm font-bold text-green-600 bg-green-100 inline-block px-3 py-1 rounded-full">Tap Me!</p>
                     </div>
-                    
-                    <img id="sprout-img" src="https://placehold.co/80x80/8B4513/fff?text=🌱" class="absolute bottom-0 opacity-50 transition-all duration-500">
                 </div>
 
                 <div class="w-full bg-gray-200 rounded-full h-4 mt-6 overflow-hidden">
@@ -125,10 +123,10 @@
 
         // Assets & Config
         const IMAGES = {
-            'Rose': 'https://placehold.co/200x200/FF69B4/000?text=Rose',
-            'Tulip': 'https://placehold.co/200x200/FFD700/000?text=Tulip',
-            'Daisy': 'https://placehold.co/200x200/FFFFFF/000?text=Daisy',
-            'Orchid': 'https://placehold.co/200x200/A020F0/000?text=Orchid'
+            'Rose': './Rose.png',
+            'Tulip': './Tulip.jpg',
+            'Daisy': './Daisy.jpg',
+            'Orchid': './Orchid.png'
         };
 
         const THEMES = {
@@ -292,5 +290,6 @@
     </script>
 </body>
 </html>
+
 
 
