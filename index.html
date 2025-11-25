@@ -3,121 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Personalized Flower Gift</title>
-
-    <!-- Load Tailwind CSS for styling -->
+    <title>💌 Create Your Personalized Flower Gift</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Load Firebase SDKs (v9 syntax via CDN for the script.js logic) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, collection, query, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
-        
-        // Expose Firebase components globally for use in the non-module script.js
-        window.firebase = {
-            initializeApp,
-            getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged,
-            getFirestore, doc, onSnapshot, collection, query, setDoc, getDoc, setLogLevel
-        };
-    </script>
-    
-    <!-- Tone.js for optional music/sound effects -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
-
-    <link rel="stylesheet" href="style.css">
-    
     <style>
-        /* Ensure canvas is responsive while maintaining the pixelated look */
-        #garden-canvas {
-            display: block;
-            width: 100%; /* Fill container width */
-            max-width: 900px; /* Optional max width */
-            height: auto; /* Maintain aspect ratio */
-            image-rendering: pixelated;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fcfcfc; /* Light, soft background */
+        }
+        .container {
+            max-width: 1000px;
+        }
+        /* Custom styling for the link display box */
+        #generated-link-container {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            word-break: break-all;
+        }
+        /* Style for the copy button */
+        #copy-button {
+            transition: background-color 0.2s;
+        }
+        #copy-button:hover {
+            background-color: #5849b3; /* Darker hover for the generate button's primary color */
+        }
+        /* Custom style for flower buttons to handle hover state visually */
+        .flower-button:hover {
+            transform: scale(1.05);
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="min-h-screen flex flex-col items-center p-4 sm:p-8">
 
-    <!-- Garden/Flower View Toggle Button -->
-    <button id="garden-button" class="fixed top-4 right-4 bg-gray-700 text-white p-3 rounded-xl shadow-lg hover:bg-gray-800 transition duration-300 z-50">
-        View Garden
-    </button>
+    <div class="container w-full bg-white p-6 sm:p-10 rounded-3xl shadow-2xl space-y-6">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold text-[#7B68EE]">Build Your Digital Gift</h1>
+            <p class="text-gray-500 mt-2">Create a special flower gift link for someone.</p>
+        </header>
 
-    <!-- The Gift Builder Link (Hidden by default, used only in builder.html) -->
-    <a href="index.html" id="builder-link" class="fixed top-4 left-4 bg-blue-500 text-white p-3 rounded-xl shadow-lg hover:bg-blue-600 transition duration-300 z-50 hidden">
-        Create Your Own Gift
-    </a>
-    
-    <!-- View 1: The Interactive Flower Gift -->
-    <div id="flower-view" class="flex flex-col items-center justify-center p-4">
-        <div id="initial-state" class="container bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center justify-center text-center mt-20">
-            <h1 id="watering-instruction" class="text-3xl font-extrabold text-[#7B68EE] mb-4">
-                Water Your Seed!
-            </h1>
-            <p id="sender-message" class="text-lg text-gray-600 mb-6 italic">
-                Awaiting your touch...
-            </p>
+        <!-- 1. Personal Message Input -->
+        <section class="space-y-2">
+            <label for="message" class="block text-lg font-semibold text-gray-700">1. Your Personalized Message</label>
+            <textarea id="message" rows="3" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7B68EE] focus:border-transparent transition" placeholder="Write a sweet message..."></textarea>
+        </section>
 
-            <img id="watering-can" src="https://placehold.co/100x100/A0DAA9/FFFFFF?text=Can" alt="Watering Can" class="w-24 h-24 cursor-pointer transform transition duration-200 active:scale-95">
-            <img id="main-flower-pre" src="https://placehold.co/50x50/34D17F/FFFFFF?text=Seed" alt="The Seed" class="w-12 h-12 my-6 transition-all duration-1000">
-
-            <div id="click-counter-display" class="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full font-semibold mt-4">
-                <span id="current-clicks">0</span> / <span id="required-clicks">3</span>
+        <!-- 2. Flower Selectors (Using a flex container for responsiveness) -->
+        <section class="space-y-4">
+            <label class="block text-lg font-semibold text-gray-700">2. Choose Your Flower</label>
+            <div id="flower-select-container" class="flex flex-wrap justify-center gap-4">
+                <button data-flower="Rose" class="flower-button flex flex-col items-center p-3 border-2 border-[#7B68EE] rounded-xl shadow-md transition duration-150 bg-white hover:bg-indigo-50 active:bg-indigo-100">
+                    <img src="https://placehold.co/80x80/ffe4e1/7B68EE?text=Rose" alt="Rose" class="w-16 h-16 rounded-lg mb-1">
+                    <span class="text-sm font-medium text-gray-700">Rose</span>
+                </button>
+                <button data-flower="Tulip" class="flower-button flex flex-col items-center p-3 border-2 border-gray-200 rounded-xl shadow-md transition duration-150 bg-white hover:bg-gray-50 active:bg-gray-100">
+                    <img src="https://placehold.co/80x80/f7a8b8/7B68EE?text=Tulip" alt="Tulip" class="w-16 h-16 rounded-lg mb-1">
+                    <span class="text-sm font-medium text-gray-700">Tulip</span>
+                </button>
+                <button data-flower="Daisy" class="flower-button flex flex-col items-center p-3 border-2 border-gray-200 rounded-xl shadow-md transition duration-150 bg-white hover:bg-gray-50 active:bg-gray-100">
+                    <img src="https://placehold.co/80x80/ffdd00/7B68EE?text=Daisy" alt="Daisy" class="w-16 h-16 rounded-lg mb-1">
+                    <span class="text-sm font-medium text-gray-700">Daisy</span>
+                </button>
             </div>
+            <input type="hidden" id="flower-select" value="Rose"> <!-- Hidden input to hold selected flower -->
+        </section>
 
-            <p class="text-sm mt-4 text-gray-500">
-                Click the watering can <span id="required-clicks-text">3</span> times to make the flower bloom!
-            </p>
+        <!-- 3. Theme Selector (Hidden for simplification, using a default value) -->
+        <input type="hidden" id="theme-select" value="Forest">
+
+        <!-- 4. Interaction Settings -->
+        <section class="space-y-2">
+            <label for="clicks" class="block text-lg font-semibold text-gray-700">3. Watering Clicks Needed</label>
+            <div class="flex items-center space-x-3">
+                <input type="number" id="clicks" value="5" min="1" max="10" class="w-20 p-3 border-2 border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-[#7B68EE] focus:border-transparent transition">
+                <p class="text-gray-500 text-sm">The number of times the receiver needs to click to make the flower bloom (1-10).</p>
+            </div>
+        </section>
+
+
+        <!-- 5. Generate Button -->
+        <button id="generate-button" class="w-full py-4 text-white bg-[#7B68EE] hover:bg-[#6A5ACD] font-bold text-xl rounded-lg shadow-lg transform transition duration-150 hover:scale-[1.02]">
+            <span role="img" aria-label="Gift Box">🎁</span> Generate Gift Link
+        </button>
+
+        <!-- 6. Generated Link Output -->
+        <div id="generated-link-container" class="mt-6 p-4 bg-gray-100 rounded-xl border border-dashed border-gray-400 flex flex-col items-center justify-center min-h-[100px]">
+            <p class="text-gray-600 font-medium mb-3">Your Shareable Link Will Appear Here:</p>
+            <div id="link-output-area" class="w-full flex flex-col items-center">
+                <p id="link-text" class="text-sm text-gray-800 text-center select-all break-all hidden mb-3 p-2 bg-white rounded-lg shadow-md"></p>
+                <button id="copy-button" class="mt-2 px-6 py-2 bg-[#6495ED] text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition duration-150 hidden">
+                    Copy Link to Clipboard
+                </button>
+            </div>
         </div>
 
-        <!-- Gift Reveal State (Initially hidden) -->
-        <div id="gift-reveal" class="container bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center justify-center text-center mt-20 hidden">
-            <h2 class="text-3xl font-bold text-green-700 mb-4 animate-pulse">It Bloomed!</h2>
-            <img id="main-flower" src="https://placehold.co/200x200/F08080/FFFFFF?text=Rose" alt="The Gift Flower" class="w-48 h-48 transform scale-0 transition-transform duration-1000 ease-out">
-            
-            <!-- Message Box -->
-            <div class="bg-gray-50 p-6 rounded-xl shadow-inner mt-6 border-4 border-[#7B68EE] w-full">
-                <p id="personal-message" class="text-md italic text-gray-700 font-medium"></p>
-            </div>
-            
-            <!-- Sparkle Effect Overlay -->
-            <div id="sparkle-overlay" class="absolute inset-0"></div>
-        </div>
-    </div>
-
-    <!-- View 2: The Flower Garden Collection -->
-    <div id="garden-view" class="hidden">
-        <h1 class="text-4xl font-extrabold text-white my-8 drop-shadow-lg">Your Personal Garden</h1>
-        <p class="text-white text-lg mb-8">
-             Click any flower in your garden to see its personalized message and date received.
+        <!-- 7. Help Text -->
+        <p class="text-center text-sm text-gray-400 mt-6">
+            **Note**: This is the flower *creation* page. The link you generate will point to the *gift* page.
         </p>
 
-        <!-- Canvas for the Pixel Garden -->
-        <div id="pixel-garden-container" class="max-w-full w-[95%] sm:w-[80%] lg:w-[600px] mx-auto">
-            <canvas id="garden-canvas" width="600" height="400" class="shadow-2xl"></canvas>
-        </div>
     </div>
 
-    <!-- ========================================================================= -->
-    <!-- MODAL FOR FLOWER DETAILS -->
-    <!-- ========================================================================= -->
-    <div id="flower-modal" class="fixed inset-0 hidden modal flex items-center justify-center p-4">
-        <!-- Modal Backdrop -->
-        <div class="fixed inset-0 bg-black opacity-60 modal-close-backdrop"></div>
-        <!-- Modal Content -->
-        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl relative transform transition-all duration-300 scale-100 z-10">
-            <button class="close-button absolute top-2 right-4 text-gray-500 hover:text-gray-900 text-3xl font-light leading-none">&times;</button>
-            <h3 id="modal-flower-name" class="text-2xl font-bold text-[#7B68EE] mb-2">Flower Name</h3>
-            <p id="modal-flower-date" class="text-sm text-gray-500 mb-4"></p>
-            <hr class="mb-4 border-gray-200">
-            <p id="modal-flower-message" class="text-gray-700 italic text-md"></p>
-        </div>
-    </div>
+    <!-- JAVASCRIPT LOGIC -->
+    <script type="module" src="script (1).js"></script>
 
-    <!-- JAVASCRIPT LOGIC (Main App Script) -->
-    <script src="script.js"></script>
 </body>
 </html>
